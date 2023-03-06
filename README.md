@@ -10,8 +10,5 @@
   - A different build directory can be forced with `BUILD_DIR=[DIR] make ...`
     - Defaults to `build`
 
-## Working features
-  - 
-
 ## Planned features
   - 
