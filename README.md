@@ -16,7 +16,12 @@
 
 ## Features
   - [ ] Battery reporting
-  - [ ] LED support
+  - [ ] LED support (on / off, brightness, colour)
   - [ ] Sidetone support
   - [ ] Notification support
   - [ ] Misc sysfs attributes (firmware revision, hardware revision, etc)
+
+## References:
+  - [headsetcontrol](https://github.com/Sapd/HeadsetControl/blob/master/src/devices/corsair_void.c)
+  - [hid-corsair](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/drivers/hid/hid-corsair.c)
+  - [hid-logitech](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/drivers/hid/hid-logitech-hidpp.c)
