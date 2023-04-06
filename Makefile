@@ -7,6 +7,8 @@ else
 	KDIR ?= /lib/modules/$(shell uname -r)/build
 	PWD := $(shell pwd)
 
+$(BUILD_DIR)/corsair-void.ko: src/*
+	$(MAKE) default
 default: prepare
 	cp -r src/* $(BUILD_DIR)/
 	$(MAKE) -C $(KDIR) M=$(PWD)/$(BUILD_DIR) modules
