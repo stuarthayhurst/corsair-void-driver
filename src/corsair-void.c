@@ -216,6 +216,7 @@ MODULE_DESCRIPTION("HID driver for Corsair Void headsets");
  - Investigate disconnect handler
  - Actually read attributes (might need access to usbif, hid device prep / removal)
  - Check which calls are actually needed to read data (parse?)
+ - Check which headers are actually required
  - Clean up code quality
 */
 

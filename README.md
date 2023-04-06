@@ -19,7 +19,7 @@
   - [ ] LED support (on / off, brightness, colour)
   - [ ] Sidetone support
   - [ ] Notification support
-  - [ ] Misc sysfs attributes (firmware revision, hardware revision, etc)
+  - [ ] Misc sysfs attributes (firmware revision, hardware revision, mic status, etc)
 
 ## References:
   - [headsetcontrol](https://github.com/Sapd/HeadsetControl/blob/master/src/devices/corsair_void.c)
