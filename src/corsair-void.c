@@ -131,6 +131,8 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 		goto failed;
 	}
 
+	power_supply_powers(drvdata->batt, dev);
+
 	goto success;
 
 failed:
