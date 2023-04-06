@@ -86,7 +86,7 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 
 	if (!hid_is_usb(hid_dev)) {
 		ret = -EINVAL;
-		goto failed;
+		return ret;
 	}
 
 	drvdata = devm_kzalloc(dev, sizeof(struct corsair_void_drvdata),
@@ -94,7 +94,7 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 
 	if (drvdata == NULL) {
 		ret = -ENOMEM;
-		goto failed;
+		return ret;
 	}
 	hid_set_drvdata(hid_dev, drvdata);
 	psy_cfg.drv_data = drvdata;
@@ -102,12 +102,12 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 	ret = hid_parse(hid_dev);
 	if (ret != 0) {
 		hid_err(hid_dev, "parse failed\n");
-		goto failed;
+		return ret;
 	}
 	ret = hid_hw_start(hid_dev, HID_CONNECT_DEFAULT);
 	if (ret != 0) {
 		hid_err(hid_dev, "hw start failed\n");
-		goto failed;
+		return ret;
 	}
 
 	drvdata->dev = dev;
@@ -134,6 +134,7 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 	goto success;
 
 failed:
+	hid_hw_stop(hid_dev);
 success:
 	return ret;
 }
