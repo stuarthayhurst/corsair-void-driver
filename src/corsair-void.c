@@ -14,23 +14,51 @@
 
 //TODO: add more
 static enum power_supply_property corsair_void_battery_props[] = {
-//POWER_SUPPLY_PROP_STATUS,
+	POWER_SUPPLY_PROP_STATUS,
+	POWER_SUPPLY_PROP_PRESENT,
 	POWER_SUPPLY_PROP_CAPACITY,
-//POWER_SUPPLY_PROP_CAPACITY_LEVEL,
+	POWER_SUPPLY_PROP_CAPACITY_LEVEL,
 	POWER_SUPPLY_PROP_SCOPE,
 	POWER_SUPPLY_PROP_MODEL_NAME,
 	POWER_SUPPLY_PROP_MANUFACTURER,
+};
+
+struct corsair_void_battery_data {
+	int status;
+	int present;
+	int capacity;
+	int capacity_level;
 };
 
 struct corsair_void_drvdata {
 	struct hid_device *hid_dev;
 	struct device *dev;
 
-	int capacity;
+	struct corsair_void_battery_data battery_data;
 
 	struct power_supply *batt;
 	struct power_supply_desc batt_desc;
 };
+
+static int corsair_void_read_battery(struct corsair_void_drvdata *drvdata)
+{
+	int ret = 0;
+
+	struct hid_device *hid_dev = drvdata->hid_dev;
+	struct corsair_void_battery_data *batt_data = &drvdata->battery_data;
+
+/* TODO:
+ - Read actual data from the device
+ - Add return codes
+*/
+
+	batt_data->status = POWER_SUPPLY_STATUS_UNKNOWN;
+	batt_data->present = 1;
+	batt_data->capacity = 100;
+	batt_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
+
+	return ret;
+}
 
 static int corsair_void_battery_get_property(struct power_supply *psy,
 					     enum power_supply_property psp,
@@ -39,18 +67,21 @@ static int corsair_void_battery_get_property(struct power_supply *psy,
 	struct corsair_void_drvdata *drvdata = power_supply_get_drvdata(psy);
 	int ret = 0;
 
-//TODO: call function to populate battery info
-
-//TODO Add more attributes
+	corsair_void_read_battery(drvdata);
 
 	switch (psp) {
-//TODO: Replace comments with properties
-//		case POWER_SUPPLY_PROP_STATUS:
-		case POWER_SUPPLY_PROP_CAPACITY:
-			//TODO: read saved data
-			val->intval = 100;
+		case POWER_SUPPLY_PROP_STATUS:
+			val->intval = drvdata->battery_data.status;
 			break;
-//		case POWER_SUPPLY_PROP_CAPACITY_LEVEL:
+		case POWER_SUPPLY_PROP_PRESENT:
+			val->intval = drvdata->battery_data.present;
+			break;
+		case POWER_SUPPLY_PROP_CAPACITY:
+			val->intval = drvdata->battery_data.capacity;
+			break;
+		case POWER_SUPPLY_PROP_CAPACITY_LEVEL:
+			val->intval = drvdata->battery_data.capacity_level;
+			break;
 		case POWER_SUPPLY_PROP_SCOPE:
 			val->intval = POWER_SUPPLY_SCOPE_DEVICE;
 			break;
@@ -64,8 +95,6 @@ static int corsair_void_battery_get_property(struct power_supply *psy,
 		case POWER_SUPPLY_PROP_MANUFACTURER:
 			val->strval = "Corsair";
 			break;
-//		case POWER_SUPPLY_PROP_SERIAL_NUMBER:
-//			val->strval = drvdata->hid_dev->uniq;
 		default:
 			ret = -EINVAL;
 			break;
@@ -113,9 +142,6 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 	drvdata->dev = dev;
 	drvdata->hid_dev = hid_dev;
 
-//TODO: replace (maybe?) - use a struct to store all battery data
-	drvdata->capacity = 100;
-
         snprintf(name, sizeof(name), "hid-%d-battery", hid_dev->id);
 	drvdata->batt_desc.name = name;
 
@@ -143,7 +169,7 @@ success:
 
 static void corsair_void_remove(struct hid_device *hid_dev)
 {
-//TODO
+//TODO: done by devm, doesn't work (segfault on device disconnect / module unload)
 	//struct corsair_void_drvdata *drvdata = hid_get_drvdata(hid_dev);
 	//power_supply_unregister(drvdata->batt);
 
@@ -185,21 +211,19 @@ MODULE_AUTHOR("Stuart Hayhurst");
 MODULE_DESCRIPTION("HID driver for Corsair Void headsets");
 
 /*TODO:
- - Fix segfault on corsair_remove (cancel work somehow?)
- - Boilerplate prep to actually read attributes
+ - Fix segfault on corsair_remove (cancel work somehow? take out a lock? blood sacrifice?)
  - Set device class for upower (might need linking devices?)
  - Investigate disconnect handler
  - Actually read attributes (might need access to usbif, hid device prep / removal)
- - Add volume rocker support
+ - Check which calls are actually needed to read data (parse?)
  - Clean up code quality
 */
 
 /* Planned attributes: (ask Corsair for datasheet)
  - firmware revision
  - hardware revision
- - status
- - capacity level
  - Check Logitech driver + Corsair windows driver + headsetcontrol to build complete list
+ - Check documentation for more battery properties
 */
 
 /* Plans:
