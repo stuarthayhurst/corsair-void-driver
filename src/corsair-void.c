@@ -34,6 +34,8 @@ struct corsair_void_drvdata {
 	struct hid_device *hid_dev;
 	struct device *dev;
 
+	char* name;
+
 	struct corsair_void_battery_data battery_data;
 
 	struct power_supply *batt;
@@ -106,10 +108,10 @@ static int corsair_void_battery_get_property(struct power_supply *psy,
 static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_device_id *hid_id)
 {
 	int ret = 0;
-	char name[32];
 	struct corsair_void_drvdata *drvdata;
 	struct power_supply_config psy_cfg;
 	struct device *dev;
+	char *name;
 
 	dev = &hid_dev->dev;
 
@@ -142,9 +144,10 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 	drvdata->dev = dev;
 	drvdata->hid_dev = hid_dev;
 
-        snprintf(name, sizeof(name), "hid-%d-battery", hid_dev->id);
-	drvdata->batt_desc.name = name;
+	name = devm_kzalloc(dev, 14, GFP_KERNEL);
+	sprintf(name, "hid-%02d-battery", hid_dev->id);
 
+	drvdata->batt_desc.name = name;
 	drvdata->batt_desc.type = POWER_SUPPLY_TYPE_BATTERY;
 	drvdata->batt_desc.properties = corsair_void_battery_props;
 	drvdata->batt_desc.num_properties = ARRAY_SIZE(corsair_void_battery_props);

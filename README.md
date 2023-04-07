@@ -4,8 +4,6 @@
   - Requires kernel headers to be installed
   - I'll eventually upstream this driver, but I'd rather get it feature-complete and stable first
 
-**WARNING: This currently causes a page fault most of the time when it's unloaded**
-
 ## Build system
   - `make`: Build the module
   - `make install`: Install the module
