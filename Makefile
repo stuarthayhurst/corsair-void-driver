@@ -15,9 +15,11 @@ default: prepare
 install: prepare
 	$(MAKE) -C $(KDIR) M=$(PWD)/$(BUILD_DIR) modules_install
 	depmod -A
-clean: prepare
-	$(MAKE) -C $(KDIR) M=$(PWD)/$(BUILD_DIR) clean
-	rm -rfv $(BUILD_DIR)
+clean:
+	@if [ -d $(BUILD_DIR) ]; then \
+	  $(MAKE) -C $(KDIR) M=$(PWD)/$(BUILD_DIR) clean; \
+	  rm -rfv $(BUILD_DIR); \
+	fi
 prepare:
 	mkdir -p $(BUILD_DIR)
 	rm -f $(BUILD_DIR)/Makefile
