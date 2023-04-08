@@ -42,21 +42,90 @@ struct corsair_void_drvdata {
 	struct power_supply_desc batt_desc;
 };
 
+//TODO: Rename and move
+#define CONTROL_REQUEST 0x09
+#define CONTROL_REQUEST_TYPE 0x21
+#define CONTROL_VALUE 0x02c9
+#define CONTROL_INDEX 3
+
 static int corsair_void_read_battery(struct corsair_void_drvdata *drvdata)
 {
 	int ret = 0;
 
-	struct hid_device *hid_dev = drvdata->hid_dev;
+	struct device *dev = drvdata->dev;
 	struct corsair_void_battery_data *batt_data = &drvdata->battery_data;
 
-/* TODO:
- - Read actual data from the device
- - Add return codes
+	struct usb_interface *usb_if = to_usb_interface(dev->parent);
+	struct usb_device *usb_dev = interface_to_usbdev(usb_if);
+
+	unsigned char send_buf[2] = {0xC9, 0x64};
+	//unsigned char data_buf[5] = {0, 0, 0, 0, 0};
+
+/* TODO: better approach
+ - Send control packet
+ - Wait for return packet (interrupt)
+ - Process data
+ - Effectively, just translate the hidapi calls to kernel space?
 */
 
-	batt_data->status = POWER_SUPPLY_STATUS_UNKNOWN;
+/* TODO: improvements
+ - Handle errors
+ - Replace hex with macros
+*/
+
+
+	/* TODO:
+	 - Not sure how much is necessary
+	 - Currently, none of it; all it does is prompts the headset to send a report
+	 - The sent report is actually ignored, and just used in some future call
+	*/
+	ret = usb_control_msg_send(usb_dev, 0,
+			CONTROL_REQUEST, CONTROL_REQUEST_TYPE,
+			CONTROL_VALUE, CONTROL_INDEX,
+			send_buf, 2,
+			USB_CTRL_SET_TIMEOUT, GFP_KERNEL);
+
+// TODO:
+/*ret = usb_interrupt_msg(usb_dev, usb_rcvintpipe(usb_dev, 3), //Maybe 0x83?
+		&data_buf[0], 64, //Do I really need 64 here?
+		&actual, 0 //Use correct timeout
+);*/
+
+/* TODO: USB debug
+printk(KERN_INFO "ctrl ret: %i", ret);
+printk(KERN_INFO "blk ret: %i", ret);
+printk(KERN_INFO "Send 0: %i", send_buf[0]);
+printk(KERN_INFO "Send 1: %i", send_buf[1]);
+printk(KERN_INFO "DONE");
+*/
+
+/* TODO Working hidapi calls:
+  ret = hid_write(hid_dev, [0xC9, 0x64], 2);
+  ret = hid_read_timeout(hid_dev, read_data, 5, timeout);
+*/
+
+/* TODO: this describes the endpoint data is sent back from the headset on
+Endpoint Descriptor:
+  bLength                 7
+  bDescriptorType         5
+  bEndpointAddress     0x83  EP 3 IN
+  bmAttributes            3
+    Transfer Type            Interrupt
+    Synch Type               None
+    Usage Type               Data
+  wMaxPacketSize     0x0020  1x 32 bytes
+  bInterval               1
+*/
+
+
+
+	batt_data->status = POWER_SUPPLY_STATUS_DISCHARGING;
 	batt_data->present = 1;
-	batt_data->capacity = 100;
+	/*TODO:
+	 - Set by corsair_void_event, ideally don't do this
+	 - At the very least, wait here up to a timeout
+	*/
+	//batt_data->capacity = 100;
 	batt_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
 
 	return ret;
@@ -153,6 +222,8 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 	drvdata->batt_desc.num_properties = ARRAY_SIZE(corsair_void_battery_props);
 	drvdata->batt_desc.get_property = corsair_void_battery_get_property;
 
+	drvdata->battery_data.capacity = 100;
+
 	drvdata->batt = devm_power_supply_register(dev, &drvdata->batt_desc, &psy_cfg);
 	if (IS_ERR(drvdata->batt)) {
 		dev_err(drvdata->dev, "failed to register battery\n");
@@ -172,11 +243,20 @@ success:
 
 static void corsair_void_remove(struct hid_device *hid_dev)
 {
-//TODO: done by devm, doesn't work (segfault on device disconnect / module unload)
-	//struct corsair_void_drvdata *drvdata = hid_get_drvdata(hid_dev);
-	//power_supply_unregister(drvdata->batt);
-
 	hid_hw_stop(hid_dev);
+}
+
+static int corsair_void_event(struct hid_device *dev, struct hid_field *field,
+			      struct hid_usage *usage, __s32 value)
+{
+	struct corsair_void_drvdata *drvdata = hid_get_drvdata(dev);
+
+	//This is a bad idea, but also use a macro
+	if (usage->code == 40) {
+	  drvdata->battery_data.capacity = value;
+	}
+
+	return 0;
 }
 
 static const struct hid_device_id corsair_void_devices[] = {
@@ -205,6 +285,7 @@ static struct hid_driver corsair_void_driver = {
 	.id_table = corsair_void_devices,
 	.probe = corsair_void_probe,
 	.remove = corsair_void_remove,
+	.event = corsair_void_event,
 };
 
 module_hid_driver(corsair_void_driver);
@@ -214,13 +295,11 @@ MODULE_AUTHOR("Stuart Hayhurst");
 MODULE_DESCRIPTION("HID driver for Corsair Void headsets");
 
 /*TODO:
- - Fix segfault on corsair_remove (cancel work somehow? take out a lock? blood sacrifice?)
- - Set device class for upower (might need linking devices?)
- - Investigate disconnect handler
- - Actually read attributes (might need access to usbif, hid device prep / removal)
+ - Set device class for upower (might need linking devices? fix report descriptor?)
+ - Better approach to battery setting, read more data, properly
  - Check which calls are actually needed to read data (parse?)
  - Check which headers are actually required
- - Clean up code quality
+ - Clean up code
 */
 
 /* Planned attributes: (ask Corsair for datasheet)
