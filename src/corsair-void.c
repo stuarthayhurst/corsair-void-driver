@@ -230,7 +230,7 @@ static int corsair_void_battery_get_property(struct power_supply *psy,
 	struct corsair_void_drvdata *drvdata = power_supply_get_drvdata(psy);
 	int ret = 0;
 
-	corsair_void_read_battery(drvdata);
+	ret = corsair_void_read_battery(drvdata);
 
 	switch (psp) {
 		case POWER_SUPPLY_PROP_STATUS:
