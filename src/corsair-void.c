@@ -317,8 +317,6 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 	drvdata->batt_desc.num_properties = ARRAY_SIZE(corsair_void_battery_props);
 	drvdata->batt_desc.get_property = corsair_void_battery_get_property;
 
-	drvdata->battery_data.capacity = 100;
-
 	drvdata->batt = devm_power_supply_register(dev, &drvdata->batt_desc, &psy_cfg);
 	if (IS_ERR(drvdata->batt)) {
 		dev_err(drvdata->dev, "failed to register battery\n");
