@@ -12,6 +12,15 @@
 
 #include "hid-ids.h"
 
+#define CORSAIR_VOID_CONTROL_REQUEST 0x09
+#define CORSAIR_VOID_CONTROL_REQUEST_TYPE 0x21
+#define CORSAIR_VOID_CONTROL_VALUE 0x02c9
+#define CORSAIR_VOID_CONTROL_INDEX 3
+#define CORSAIR_VOID_ENDPOINT_IN 0x83
+
+#define CORSAIR_VOID_BATT_DATA_SIZE 5
+#define CORSAIR_VOID_MIC_UP 128
+
 //TODO: add more
 static enum power_supply_property corsair_void_battery_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
@@ -42,63 +51,6 @@ struct corsair_void_drvdata {
 	struct power_supply_desc batt_desc;
 };
 
-//TODO: Rename and move
-#define CONTROL_REQUEST 0x09
-#define CONTROL_REQUEST_TYPE 0x21
-#define CONTROL_VALUE 0x02c9
-#define CONTROL_INDEX 3
-
-static int corsair_void_read_battery(struct corsair_void_drvdata *drvdata)
-{
-	int ret = 0;
-
-	struct device *dev = drvdata->dev;
-	struct corsair_void_battery_data *batt_data = &drvdata->battery_data;
-
-	struct usb_interface *usb_if = to_usb_interface(dev->parent);
-	struct usb_device *usb_dev = interface_to_usbdev(usb_if);
-
-	unsigned char send_buf[2] = {0xC9, 0x64};
-	//unsigned char data_buf[5] = {0, 0, 0, 0, 0};
-
-/* TODO: better approach
- - Send control packet
- - Wait for return packet (interrupt)
- - Process data
- - Effectively, just translate the hidapi calls to kernel space?
-*/
-
-/* TODO: improvements
- - Handle errors
- - Replace hex with macros
-*/
-
-
-	/* TODO:
-	 - Not sure how much is necessary
-	 - Currently, none of it; all it does is prompts the headset to send a report
-	 - The sent report is actually ignored, and just used in some future call
-	*/
-	ret = usb_control_msg_send(usb_dev, 0,
-			CONTROL_REQUEST, CONTROL_REQUEST_TYPE,
-			CONTROL_VALUE, CONTROL_INDEX,
-			send_buf, 2,
-			USB_CTRL_SET_TIMEOUT, GFP_KERNEL);
-
-// TODO:
-/*ret = usb_interrupt_msg(usb_dev, usb_rcvintpipe(usb_dev, 3), //Maybe 0x83?
-		&data_buf[0], 64, //Do I really need 64 here?
-		&actual, 0 //Use correct timeout
-);*/
-
-/* TODO: USB debug
-printk(KERN_INFO "ctrl ret: %i", ret);
-printk(KERN_INFO "blk ret: %i", ret);
-printk(KERN_INFO "Send 0: %i", send_buf[0]);
-printk(KERN_INFO "Send 1: %i", send_buf[1]);
-printk(KERN_INFO "DONE");
-*/
-
 /* TODO Working hidapi calls:
   ret = hid_write(hid_dev, [0xC9, 0x64], 2);
   ret = hid_read_timeout(hid_dev, read_data, 5, timeout);
@@ -117,17 +69,152 @@ Endpoint Descriptor:
   bInterval               1
 */
 
+/* data_buf:
+Index : 0       , 1, 2         , 3      , 4
+Info  : ID (100), 0, CHARGE (%), STATUS?, BATTERY STATUS
+*/
+
+//Capacity seems to report 54 higher when charging?
+
+//status:
+//38, 51, 177
+
+/*BATTERY STATUS:
+0: disconnected
+1/2: normal / low
+3: unknown (not seen)
+4/5: charging
+*/
+
+//51: searching?
+//177: connected?
+//38: ?? gave up? - gave after a long beep - error?
+
+static int corsair_void_read_battery(struct corsair_void_drvdata *drvdata)
+{
+	int ret = 0;
+
+	struct device *dev = drvdata->dev;
+	struct corsair_void_battery_data *batt_data = &drvdata->battery_data;
+
+	struct usb_interface *usb_if = to_usb_interface(dev->parent);
+	struct usb_device *usb_dev = interface_to_usbdev(usb_if);
+
+	unsigned char send_buf[2] = {0xC9, 0x64};
+	unsigned char *data_buf; //Allocated later, required for USB calls
+	int actual_size = 0;
+
+/* TODO: better approach
+ - Send control packet
+ - Wait for return packet (interrupt)
+ - Process data
+ - Effectively, just translate the hidapi calls to kernel space?
+
+ - Replace hex with macros
+*/
+
+//TODO: ideal
+/*ret = hid_hw_raw_request(drvdata->hid_dev, 100, data_buf, SIZE, HID_INPUT_REPORT,
+				HID_REQ_GET_REPORT);*/
 
 
-	batt_data->status = POWER_SUPPLY_STATUS_DISCHARGING;
-	batt_data->present = 1;
-	/*TODO:
-	 - Set by corsair_void_event, ideally don't do this
-	 - At the very least, wait here up to a timeout
-	*/
-	//batt_data->capacity = 100;
+//TODO reduce retires
+int retries = 5;
+
+
+
+int i; //TODO debug
+printk("starting");
+
+data_buf = kzalloc(CORSAIR_VOID_BATT_DATA_SIZE, GFP_KERNEL);
+
+
+
+	do {
+
+//TODO is this necessary?
+	ret = usb_control_msg_send(usb_dev, 0,
+			CORSAIR_VOID_CONTROL_REQUEST, CORSAIR_VOID_CONTROL_REQUEST_TYPE,
+			CORSAIR_VOID_CONTROL_VALUE, CORSAIR_VOID_CONTROL_INDEX,
+			send_buf, 2,
+			USB_CTRL_SET_TIMEOUT, GFP_KERNEL);
+
+	if (ret) {
+//TODO debug
+printk(KERN_INFO "ctrl ret: %i", ret);
+
+		goto ctrl_failed;
+	}
+
+//TODO: send poll first, wrap ctrl
+ret = usb_bulk_msg(usb_dev,
+		usb_rcvbulkpipe(usb_dev, CORSAIR_VOID_ENDPOINT_IN), //might be just 3
+		data_buf,
+		CORSAIR_VOID_BATT_DATA_SIZE, //set at compile time, not write time
+		&actual_size, 1000); //might need to replace 0
+
+//TODO debug
+printk(KERN_INFO "  rpt ret: %i", ret);
+
+
+ctrl_failed:
+
+//TODO debug
+printk(KERN_INFO "  code: %i", data_buf[0]);
+
+
+	//Retry if it got the wrong packet, timed out or was interrupted, and has retries left
+	} while (((ret == -EAGAIN || ret == -ETIMEDOUT) || (data_buf[0] != 100)) && --retries);
+
+	//Failed to read battery data
+	if (ret || data_buf[0] != 100 || actual_size != 5) {
+		printk(KERN_WARNING "Failed to read battery data for %s", drvdata->batt_desc.name);
+		goto unknown_data;
+	}
+
+	if (!ret && data_buf[4] != 0) {
+		batt_data->status = POWER_SUPPLY_STATUS_UNKNOWN;
+		batt_data->present = 1;
+		if (data_buf[4] == 0) { //Headset disconnected
+			batt_data->status = POWER_SUPPLY_STATUS_UNKNOWN;
+			batt_data->present = 0;
+		} else if (data_buf[4] == 1 || data_buf[4] == 2) { //Battery normal / low
+			batt_data->status = POWER_SUPPLY_STATUS_DISCHARGING;
+		} else if (data_buf[4] == 4 || data_buf[4] == 5) { //Battery charging
+			batt_data->status = POWER_SUPPLY_STATUS_CHARGING;
+		} else {
+			goto unknown_data;
+		}
+
+		//Ignore mic status
+		if (data_buf[2] & CORSAIR_VOID_MIC_UP) {
+			data_buf[2] = data_buf[2] & ~CORSAIR_VOID_MIC_UP;
+		}
+		batt_data->capacity = data_buf[2];
+
+//TODO: Set capacity level from a case
+batt_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
+
+
+//TODO debug
+for (i = 0; i < CORSAIR_VOID_BATT_DATA_SIZE; i++) {
+	printk(KERN_INFO "DATA %i : %i", i, data_buf[i]);
+}
+
+	} else {
+		goto unknown_data;
+	}
+
+
+goto success;
+unknown_data:
+	batt_data->status = POWER_SUPPLY_STATUS_UNKNOWN;
+	batt_data->present = 0;
+	batt_data->capacity = 0;
 	batt_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
 
+success:
+	kfree(data_buf);
 	return ret;
 }
 
@@ -246,19 +333,6 @@ static void corsair_void_remove(struct hid_device *hid_dev)
 	hid_hw_stop(hid_dev);
 }
 
-static int corsair_void_event(struct hid_device *dev, struct hid_field *field,
-			      struct hid_usage *usage, __s32 value)
-{
-	struct corsair_void_drvdata *drvdata = hid_get_drvdata(dev);
-
-	//This is a bad idea, but also use a macro
-	if (usage->code == 40) {
-	  drvdata->battery_data.capacity = value;
-	}
-
-	return 0;
-}
-
 static const struct hid_device_id corsair_void_devices[] = {
   {HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, USB_DEVICE_ID_CORSAIR_VOID_WIRELESS)},
   {HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, USB_DEVICE_ID_CORSAIR_VOID_PRO)},
@@ -285,7 +359,6 @@ static struct hid_driver corsair_void_driver = {
 	.id_table = corsair_void_devices,
 	.probe = corsair_void_probe,
 	.remove = corsair_void_remove,
-	.event = corsair_void_event,
 };
 
 module_hid_driver(corsair_void_driver);
@@ -295,6 +368,7 @@ MODULE_AUTHOR("Stuart Hayhurst");
 MODULE_DESCRIPTION("HID driver for Corsair Void headsets");
 
 /*TODO:
+ - Handle allocation failures (devm + other)
  - Set device class for upower (might need linking devices? fix report descriptor?)
  - Better approach to battery setting, read more data, properly
  - Check which calls are actually needed to read data (parse?)
