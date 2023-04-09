@@ -105,22 +105,29 @@ static int corsair_void_read_battery(struct corsair_void_drvdata *drvdata)
 	int actual_size = 0;
 
 /* TODO: better approach
+ - Send bulk message - test interrupt
  - Send control packet
- - Wait for return packet (interrupt)
+ - Wait for return bulk packet
  - Process data
  - Effectively, just translate the hidapi calls to kernel space?
+   - need a queue for this one, look into hid kernel api
+
+ - Maybe look into the event handler more? send packet here, timeout if it hasn't had an event by then
 
  - Replace hex with macros
 */
+
+//TODO: look into hid-core.c, usbhit_get/set_raw_report is promising
+//hid_irq_in
+//hit_submit_out
+//Find the public versions
 
 //TODO: ideal
 /*ret = hid_hw_raw_request(drvdata->hid_dev, 100, data_buf, SIZE, HID_INPUT_REPORT,
 				HID_REQ_GET_REPORT);*/
 
-
 //TODO reduce retires
 int retries = 5;
-
 
 
 int i; //TODO debug
@@ -128,40 +135,32 @@ printk("starting");
 
 data_buf = kzalloc(CORSAIR_VOID_BATT_DATA_SIZE, GFP_KERNEL);
 
-
-
 	do {
 
 //TODO is this necessary?
-	ret = usb_control_msg_send(usb_dev, 0,
-			CORSAIR_VOID_CONTROL_REQUEST, CORSAIR_VOID_CONTROL_REQUEST_TYPE,
-			CORSAIR_VOID_CONTROL_VALUE, CORSAIR_VOID_CONTROL_INDEX,
-			send_buf, 2,
-			USB_CTRL_SET_TIMEOUT, GFP_KERNEL);
+		ret = usb_control_msg_send(usb_dev, 0,
+				CORSAIR_VOID_CONTROL_REQUEST, CORSAIR_VOID_CONTROL_REQUEST_TYPE,
+				CORSAIR_VOID_CONTROL_VALUE, CORSAIR_VOID_CONTROL_INDEX,
+				send_buf, 2,
+				USB_CTRL_SET_TIMEOUT, GFP_KERNEL);
 
-	if (ret) {
-//TODO debug
-printk(KERN_INFO "ctrl ret: %i", ret);
-
-		goto ctrl_failed;
-	}
+		if (ret) {
+			goto ctrl_failed;
+		}
 
 //TODO: send poll first, wrap ctrl
-ret = usb_bulk_msg(usb_dev,
-		usb_rcvbulkpipe(usb_dev, CORSAIR_VOID_ENDPOINT_IN), //might be just 3
-		data_buf,
-		CORSAIR_VOID_BATT_DATA_SIZE, //set at compile time, not write time
-		&actual_size, 1000); //might need to replace 0
-
-//TODO debug
-printk(KERN_INFO "  rpt ret: %i", ret);
-
+//TODO: when this is more reliable, use USB_CTRL_GET_TIMEOUT for the timeout, instead of 1000
+	ret = usb_bulk_msg(usb_dev,
+			usb_rcvbulkpipe(usb_dev, CORSAIR_VOID_ENDPOINT_IN),
+			data_buf,
+			CORSAIR_VOID_BATT_DATA_SIZE,
+			&actual_size, 1000);
 
 ctrl_failed:
 
 //TODO debug
+printk(KERN_INFO "  last ret: %i", ret);
 printk(KERN_INFO "  code: %i", data_buf[0]);
-
 
 	//Retry if it got the wrong packet, timed out or was interrupted, and has retries left
 	} while (((ret == -EAGAIN || ret == -ETIMEDOUT) || (data_buf[0] != 100)) && --retries);
