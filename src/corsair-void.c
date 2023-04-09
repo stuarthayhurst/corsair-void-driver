@@ -178,25 +178,29 @@ printk(KERN_INFO "  code: %i", data_buf[0]);
 	if (!ret && data_buf[4] != 0) {
 		batt_data->status = POWER_SUPPLY_STATUS_UNKNOWN;
 		batt_data->present = 1;
+		batt_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_NORMAL;
+
+		//Handle battery status
 		if (data_buf[4] == 0) { //Headset disconnected
-			batt_data->status = POWER_SUPPLY_STATUS_UNKNOWN;
-			batt_data->present = 0;
+			//TODO: Same as 'else' path, useful for a disconnected headset
+			goto unknown_data;
 		} else if (data_buf[4] == 1 || data_buf[4] == 2) { //Battery normal / low
 			batt_data->status = POWER_SUPPLY_STATUS_DISCHARGING;
+
+			if (data_buf[4] == 2) {
+				batt_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_LOW;
+			}
 		} else if (data_buf[4] == 4 || data_buf[4] == 5) { //Battery charging
 			batt_data->status = POWER_SUPPLY_STATUS_CHARGING;
 		} else {
 			goto unknown_data;
 		}
 
-		//Ignore mic status
+		//Set capacity, ignoring mic status
 		if (data_buf[2] & CORSAIR_VOID_MIC_UP) {
 			data_buf[2] = data_buf[2] & ~CORSAIR_VOID_MIC_UP;
 		}
 		batt_data->capacity = data_buf[2];
-
-//TODO: Set capacity level from a case
-batt_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
 
 
 //TODO debug
