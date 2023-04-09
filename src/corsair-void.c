@@ -21,7 +21,6 @@
 #define CORSAIR_VOID_BATT_DATA_SIZE 5
 #define CORSAIR_VOID_MIC_UP 128
 
-//TODO: add more
 static enum power_supply_property corsair_void_battery_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
 	POWER_SUPPLY_PROP_PRESENT,
@@ -51,45 +50,6 @@ struct corsair_void_drvdata {
 	struct power_supply_desc batt_desc;
 };
 
-/* TODO Working hidapi calls:
-  ret = hid_write(hid_dev, [0xC9, 0x64], 2);
-  ret = hid_read_timeout(hid_dev, read_data, 5, timeout);
-*/
-
-/* TODO: this describes the endpoint data is sent back from the headset on
-Endpoint Descriptor:
-  bLength                 7
-  bDescriptorType         5
-  bEndpointAddress     0x83  EP 3 IN
-  bmAttributes            3
-    Transfer Type            Interrupt
-    Synch Type               None
-    Usage Type               Data
-  wMaxPacketSize     0x0020  1x 32 bytes
-  bInterval               1
-*/
-
-/* data_buf:
-Index : 0       , 1, 2         , 3      , 4
-Info  : ID (100), 0, CHARGE (%), STATUS?, BATTERY STATUS
-*/
-
-//Capacity seems to report 54 higher when charging?
-
-//status:
-//38, 51, 177
-
-/*BATTERY STATUS:
-0: disconnected
-1/2: normal / low
-3: unknown (not seen)
-4/5: charging
-*/
-
-//51: searching?
-//177: connected?
-//38: ?? gave up? - gave after a long beep - error?
-
 static int corsair_void_read_battery(struct corsair_void_drvdata *drvdata)
 {
 	int ret = 0;
@@ -103,6 +63,7 @@ static int corsair_void_read_battery(struct corsair_void_drvdata *drvdata)
 	unsigned char send_buf[2] = {0xC9, 0x64};
 	unsigned char *data_buf; //Allocated later, required for USB calls
 	int actual_size = 0;
+	int retries = 5; //TODO: reduce this when the driver is more stable
 
 /* TODO: better approach
  - Send bulk message - test interrupt
@@ -126,12 +87,42 @@ static int corsair_void_read_battery(struct corsair_void_drvdata *drvdata)
 /*ret = hid_hw_raw_request(drvdata->hid_dev, 100, data_buf, SIZE, HID_INPUT_REPORT,
 				HID_REQ_GET_REPORT);*/
 
-//TODO reduce retires
-int retries = 5;
-
-
 int i; //TODO debug
 printk("starting");
+
+/* ------------------------------------------------------------------------- */
+// Battery report information:
+/* ------------------------------------------------------------------------- */
+/*
+Format:
+ - Index : | 0  | 1   | 2      | 3          | 4              |
+ - Info  : | ID | (?) | CHARGE | STATUS (?) | BATTERY STATUS |
+
+ID:
+ - 100 for battery
+
+(?):
+ - Seems to always be 0
+
+CHARGE:
+ - Measured as percentage
+ - Microphone status is combined here (+128)
+ - Seems to report 54 higher than reality when chargine
+ - Seems to be capped at 100 (after bitwise removal of mic status)
+
+STATUS (?):
+ - Not sure on this one
+ - Normally 177
+ - When searching for a headset 51
+ - Given up searching (?) 38
+
+BATTERY STATUS:
+ - 0     : Disconnected
+ - 1 / 2 : Normal / low
+ - 3     : Unknown (not seen)
+ - 4 / 5 : Charging
+*/
+/* ------------------------------------------------------------------------- */
 
 	data_buf = kzalloc(CORSAIR_VOID_BATT_DATA_SIZE, GFP_KERNEL);
 	if (!data_buf) {
@@ -377,8 +368,12 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Stuart Hayhurst");
 MODULE_DESCRIPTION("HID driver for Corsair Void headsets");
 
+/* TODO Working hidapi calls:
+  ret = hid_write(hid_dev, [0xC9, 0x64], 2);
+  ret = hid_read_timeout(hid_dev, read_data, 5, timeout);
+*/
+
 /*TODO:
- - Set device class for upower (might need linking devices? fix report descriptor?)
  - Better approach to battery setting, read more data, properly
  - Check which calls are actually needed to read data (parse?)
  - Check which headers are actually required
@@ -388,6 +383,7 @@ MODULE_DESCRIPTION("HID driver for Corsair Void headsets");
 /* Planned attributes: (ask Corsair for datasheet)
  - firmware revision
  - hardware revision
+ - wireless_status
  - Check Logitech driver + Corsair windows driver + headsetcontrol to build complete list
  - Check documentation for more battery properties
 */
