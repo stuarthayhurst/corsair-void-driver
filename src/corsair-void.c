@@ -133,7 +133,11 @@ int retries = 5;
 int i; //TODO debug
 printk("starting");
 
-data_buf = kzalloc(CORSAIR_VOID_BATT_DATA_SIZE, GFP_KERNEL);
+	data_buf = kzalloc(CORSAIR_VOID_BATT_DATA_SIZE, GFP_KERNEL);
+	if (!data_buf) {
+		ret = -ENOMEM;
+		goto failed_alloc;
+	}
 
 	do {
 
@@ -204,13 +208,15 @@ for (i = 0; i < CORSAIR_VOID_BATT_DATA_SIZE; i++) {
 		goto unknown_data;
 	}
 
-
 goto success;
 unknown_data:
+	kfree(data_buf);
+failed_alloc:
 	batt_data->status = POWER_SUPPLY_STATUS_UNKNOWN;
 	batt_data->present = 0;
 	batt_data->capacity = 0;
 	batt_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
+	return ret;
 
 success:
 	kfree(data_buf);
@@ -277,8 +283,7 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 
 	drvdata = devm_kzalloc(dev, sizeof(struct corsair_void_drvdata),
 			       GFP_KERNEL);
-
-	if (drvdata == NULL) {
+	if (!drvdata) {
 		ret = -ENOMEM;
 		return ret;
 	}
@@ -300,6 +305,10 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 	drvdata->hid_dev = hid_dev;
 
 	name = devm_kzalloc(dev, 14, GFP_KERNEL);
+	if (!name) {
+		ret = -ENOMEM;
+		goto failed;
+	}
 	sprintf(name, "hid-%02d-battery", hid_dev->id);
 
 	drvdata->batt_desc.name = name;
@@ -367,7 +376,6 @@ MODULE_AUTHOR("Stuart Hayhurst");
 MODULE_DESCRIPTION("HID driver for Corsair Void headsets");
 
 /*TODO:
- - Handle allocation failures (devm + other)
  - Set device class for upower (might need linking devices? fix report descriptor?)
  - Better approach to battery setting, read more data, properly
  - Check which calls are actually needed to read data (parse?)
