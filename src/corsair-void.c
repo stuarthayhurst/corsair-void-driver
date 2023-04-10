@@ -5,6 +5,43 @@
  * Copyright (c) 2023 Stuart Hayhurst
 */
 
+/* ------------------------------------------------------------------------- */
+/* Receiver report information: (ID 100)                                     */
+/* ------------------------------------------------------------------------- */
+/*
+ - When queried, the receiver seems to respond with a lot of data for little information, as HID event
+ - The following information has been observed for report ID 100
+
+PROPERTY: USAGE CODE RANGE
+  (?): -3866520 -> -3866513
+    - Seems to always be 0
+
+  BATTERY CAPACITY: -3866512
+    - Seems to report 54 higher than reality when charging
+    - Seems to be capped at 100
+
+  CONNECTION STATUS: -3866511
+    - 0: Disconnected
+    - 1: Connected
+    - 3: Searching
+    - 6: Initialising
+
+  (?): -3866509 -> -3866510
+    - Seems to always be 1
+
+  (?): -3866508
+    - Seems to always be 0
+
+  BATTERY STATUS: -3866507
+    - 0     : Disconnected
+    - 1 / 2 : Normal / low
+    - 3     : Unknown (not seen)
+    - 4 / 5 : Charging
+*/
+/* ------------------------------------------------------------------------- */
+
+#define DRIVER_NAME "corsair-void"
+
 #include <linux/hid.h>
 #include <linux/module.h>
 #include <linux/usb.h>
@@ -12,14 +49,14 @@
 
 #include "hid-ids.h"
 
+#define CORSAIR_VOID_BATT_CAPACITY_USAGE -3866512
+#define CORSAIR_VOID_CONNECTION_USAGE -3866511
+#define CORSAIR_VOID_BATT_STATUS_USAGE -3866507
+
 #define CORSAIR_VOID_CONTROL_REQUEST 0x09
 #define CORSAIR_VOID_CONTROL_REQUEST_TYPE 0x21
 #define CORSAIR_VOID_CONTROL_VALUE 0x02c9
 #define CORSAIR_VOID_CONTROL_INDEX 3
-#define CORSAIR_VOID_ENDPOINT_IN 0x83
-
-#define CORSAIR_VOID_BATT_DATA_SIZE 5
-#define CORSAIR_VOID_MIC_UP 128
 
 static enum power_supply_property corsair_void_battery_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
@@ -38,183 +75,114 @@ struct corsair_void_battery_data {
 	int capacity_level;
 };
 
+#define CORSAIR_VOID_CAPACITY_BIT 0x01
+#define CORSAIR_VOID_CONNECTION_BIT 0x02
+#define CORSAIR_VOID_STATUS_BIT 0x04
+#define CORSAIR_VOID_ALL_BITS 0x07
+
+struct corsair_void_raw_receiver_info {
+	struct completion query_completed;
+	unsigned char received_bits;
+
+	int battery_capacity;
+	int connection_status;
+	int battery_status;
+};
+
 struct corsair_void_drvdata {
 	struct hid_device *hid_dev;
 	struct device *dev;
 
 	char* name;
 
+	struct corsair_void_raw_receiver_info raw_receiver_info;
 	struct corsair_void_battery_data battery_data;
 
 	struct power_supply *batt;
 	struct power_supply_desc batt_desc;
 };
 
-static int corsair_void_read_battery(struct corsair_void_drvdata *drvdata)
+static int corsair_void_query_receiver(struct corsair_void_drvdata *drvdata)
 {
 	int ret = 0;
 
-	struct device *dev = drvdata->dev;
-	struct corsair_void_battery_data *batt_data = &drvdata->battery_data;
-
-	struct usb_interface *usb_if = to_usb_interface(dev->parent);
+	struct usb_interface *usb_if = to_usb_interface(drvdata->dev->parent);
 	struct usb_device *usb_dev = interface_to_usbdev(usb_if);
 
+	struct corsair_void_raw_receiver_info *raw_receiver_info = &drvdata->raw_receiver_info;
+	struct corsair_void_battery_data *batt_data = &drvdata->battery_data;
+
 	unsigned char send_buf[2] = {0xC9, 0x64};
-	unsigned char *data_buf; //Allocated later, required for USB calls
-	int actual_size = 0;
-	int retries = 5; //TODO: reduce this when the driver is more stable
+	unsigned long expire = 0;
 
-/* TODO: better approach
- - Send bulk message - test interrupt
- - Send control packet
- - Wait for return bulk packet
- - Process data
- - Effectively, just translate the hidapi calls to kernel space?
-   - need a queue for this one, look into hid kernel api
+	//Prepare a completion to wait for return data
+	init_completion(&raw_receiver_info->query_completed);
+	raw_receiver_info->received_bits = 0;
 
- - Maybe look into the event handler more? send packet here, timeout if it hasn't had an event by then
+	ret = usb_control_msg_send(usb_dev, 0,
+			CORSAIR_VOID_CONTROL_REQUEST, CORSAIR_VOID_CONTROL_REQUEST_TYPE,
+			CORSAIR_VOID_CONTROL_VALUE, CORSAIR_VOID_CONTROL_INDEX,
+			send_buf, 2,
+			USB_CTRL_SET_TIMEOUT, GFP_KERNEL);
 
- - Replace hex with macros
-*/
-
-//TODO: look into hid-core.c, usbhit_get/set_raw_report is promising
-//hid_irq_in
-//hit_submit_out
-//Find the public versions
-
-//TODO: ideal
-/*ret = hid_hw_raw_request(drvdata->hid_dev, 100, data_buf, SIZE, HID_INPUT_REPORT,
-				HID_REQ_GET_REPORT);*/
-
-int i; //TODO debug
-printk("starting");
-
-/* ------------------------------------------------------------------------- */
-// Battery report information:
-/* ------------------------------------------------------------------------- */
-/*
-Format:
- - Index : | 0  | 1   | 2      | 3          | 4              |
- - Info  : | ID | (?) | CHARGE | STATUS (?) | BATTERY STATUS |
-
-ID:
- - 100 for battery
-
-(?):
- - Seems to always be 0
-
-CHARGE:
- - Measured as percentage
- - Microphone status is combined here (+128)
- - Seems to report 54 higher than reality when chargine
- - Seems to be capped at 100 (after bitwise removal of mic status)
-
-STATUS (?):
- - Not sure on this one
- - Normally 177
- - When searching for a headset 51
- - Given up searching (?) 38
-
-BATTERY STATUS:
- - 0     : Disconnected
- - 1 / 2 : Normal / low
- - 3     : Unknown (not seen)
- - 4 / 5 : Charging
-*/
-/* ------------------------------------------------------------------------- */
-
-	data_buf = kzalloc(CORSAIR_VOID_BATT_DATA_SIZE, GFP_KERNEL);
-	if (!data_buf) {
-		ret = -ENOMEM;
-		goto failed_alloc;
-	}
-
-	do {
-
-//TODO is this necessary?
-		ret = usb_control_msg_send(usb_dev, 0,
-				CORSAIR_VOID_CONTROL_REQUEST, CORSAIR_VOID_CONTROL_REQUEST_TYPE,
-				CORSAIR_VOID_CONTROL_VALUE, CORSAIR_VOID_CONTROL_INDEX,
-				send_buf, 2,
-				USB_CTRL_SET_TIMEOUT, GFP_KERNEL);
-
-		if (ret) {
-			goto ctrl_failed;
-		}
-
-//TODO: send poll first, wrap ctrl
-//TODO: when this is more reliable, use USB_CTRL_GET_TIMEOUT for the timeout, instead of 1000
-	ret = usb_bulk_msg(usb_dev,
-			usb_rcvbulkpipe(usb_dev, CORSAIR_VOID_ENDPOINT_IN),
-			data_buf,
-			CORSAIR_VOID_BATT_DATA_SIZE,
-			&actual_size, 1000);
-
-ctrl_failed:
-
-//TODO debug
-printk(KERN_INFO "  last ret: %i", ret);
-printk(KERN_INFO "  code: %i", data_buf[0]);
-
-	//Retry if it got the wrong packet, timed out or was interrupted, and has retries left
-	} while (((ret == -EAGAIN || ret == -ETIMEDOUT) || (data_buf[0] != 100)) && --retries);
-
-	//Failed to read battery data
-	if (ret || data_buf[0] != 100 || actual_size != 5) {
-		printk(KERN_WARNING "Failed to read battery data for %s", drvdata->batt_desc.name);
+	if (ret) {
+		printk(KERN_WARNING DRIVER_NAME": failed to query receiver data (reason %i)", ret);
 		goto unknown_data;
 	}
 
-	if (!ret && data_buf[4] != 0) {
-		batt_data->status = POWER_SUPPLY_STATUS_UNKNOWN;
+	/*
+	  - Wait 500ms for all receiver data to arrive
+	  - Data is reported as a hid event, so we wait for the timeout, or all data to arrive
+	  - In reality, it takes much less time than this
+	*/
+	expire = msecs_to_jiffies(500);
+	if (!wait_for_completion_timeout(&raw_receiver_info->query_completed, expire)) {
+		ret = -ETIMEDOUT;
+		printk(KERN_WARNING DRIVER_NAME": failed to query receiver data (reason %i)", ret);
+		goto unknown_data;
+	}
+
+	//Check connection and battery status to set battery data
+	if (raw_receiver_info->connection_status != 1) {
+		//Headset not connected
+		goto unknown_data;
+	} else if (raw_receiver_info->battery_status == 0) {
+		//Battery information unavailable
+		goto unknown_data;
+	} else {
+		//Battery connected
 		batt_data->present = 1;
 		batt_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_NORMAL;
 
-		//Handle battery status
-		if (data_buf[4] == 0) { //Headset disconnected
-			//TODO: Same as 'else' path, useful for a disconnected headset
-			goto unknown_data;
-		} else if (data_buf[4] == 1 || data_buf[4] == 2) { //Battery normal / low
+		//Set battery status
+		switch (raw_receiver_info->battery_status) {
+		case 1:
+		case 2: //Battery normal / low
 			batt_data->status = POWER_SUPPLY_STATUS_DISCHARGING;
-
-			if (data_buf[4] == 2) {
+			if (raw_receiver_info->battery_status == 2) {
 				batt_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_LOW;
 			}
-		} else if (data_buf[4] == 4 || data_buf[4] == 5) { //Battery charging
+
+			break;
+		case 4:
+		case 5: //Battery charging
 			batt_data->status = POWER_SUPPLY_STATUS_CHARGING;
-		} else {
+			break;
+		default:
 			goto unknown_data;
+			break;
 		}
 
-		//Set capacity, ignoring mic status
-		if (data_buf[2] & CORSAIR_VOID_MIC_UP) {
-			data_buf[2] = data_buf[2] & ~CORSAIR_VOID_MIC_UP;
-		}
-		batt_data->capacity = data_buf[2];
-
-
-//TODO debug
-for (i = 0; i < CORSAIR_VOID_BATT_DATA_SIZE; i++) {
-	printk(KERN_INFO "DATA %i : %i", i, data_buf[i]);
-}
-
-	} else {
-		goto unknown_data;
+		batt_data->capacity = raw_receiver_info->battery_capacity;
 	}
 
 goto success;
 unknown_data:
-	kfree(data_buf);
-failed_alloc:
 	batt_data->status = POWER_SUPPLY_STATUS_UNKNOWN;
 	batt_data->present = 0;
 	batt_data->capacity = 0;
 	batt_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
-	return ret;
-
 success:
-	kfree(data_buf);
 	return ret;
 }
 
@@ -225,7 +193,7 @@ static int corsair_void_battery_get_property(struct power_supply *psy,
 	struct corsair_void_drvdata *drvdata = power_supply_get_drvdata(psy);
 	int ret = 0;
 
-	ret = corsair_void_read_battery(drvdata);
+	ret = corsair_void_query_receiver(drvdata);
 
 	switch (psp) {
 		case POWER_SUPPLY_PROP_STATUS:
@@ -334,6 +302,36 @@ static void corsair_void_remove(struct hid_device *hid_dev)
 	hid_hw_stop(hid_dev);
 }
 
+static int corsair_void_event(struct hid_device *hid_dev, struct hid_field *field,
+			      struct hid_usage *usage, __s32 value)
+{
+	struct corsair_void_drvdata *drvdata = hid_get_drvdata(hid_dev);
+
+	switch (usage->hid) {
+	case CORSAIR_VOID_BATT_CAPACITY_USAGE:
+		drvdata->raw_receiver_info.battery_capacity = value;
+		drvdata->raw_receiver_info.received_bits |= CORSAIR_VOID_CAPACITY_BIT;
+		break;
+	case CORSAIR_VOID_CONNECTION_USAGE:
+		drvdata->raw_receiver_info.connection_status = value;
+		drvdata->raw_receiver_info.received_bits |= CORSAIR_VOID_CONNECTION_BIT;
+		break;
+	case CORSAIR_VOID_BATT_STATUS_USAGE:
+		drvdata->raw_receiver_info.battery_status = value;
+		drvdata->raw_receiver_info.received_bits |= CORSAIR_VOID_STATUS_BIT;
+		break;
+	default:
+		break;
+	}
+
+	//When all expected attributes have been detected, finish
+	if (drvdata->raw_receiver_info.received_bits & CORSAIR_VOID_ALL_BITS) {
+		complete(&drvdata->raw_receiver_info.query_completed);
+	}
+
+	return 0;
+}
+
 static const struct hid_device_id corsair_void_devices[] = {
   {HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, USB_DEVICE_ID_CORSAIR_VOID_WIRELESS)},
   {HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, USB_DEVICE_ID_CORSAIR_VOID_PRO)},
@@ -356,10 +354,11 @@ static const struct hid_device_id corsair_void_devices[] = {
 MODULE_DEVICE_TABLE(hid, corsair_void_devices);
 
 static struct hid_driver corsair_void_driver = {
-	.name = "corsair-void",
+	.name = DRIVER_NAME,
 	.id_table = corsair_void_devices,
 	.probe = corsair_void_probe,
 	.remove = corsair_void_remove,
+	.event = corsair_void_event,
 };
 
 module_hid_driver(corsair_void_driver);
@@ -368,13 +367,14 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Stuart Hayhurst");
 MODULE_DESCRIPTION("HID driver for Corsair Void headsets");
 
-/* TODO Working hidapi calls:
-  ret = hid_write(hid_dev, [0xC9, 0x64], 2);
-  ret = hid_read_timeout(hid_dev, read_data, 5, timeout);
-*/
+
+//TODO: need to check low battery status still works
+//TODO: take out a mutex? / set a flag on the wait, to avoid multiple calls
+//TODO: Update plans + README
 
 /*TODO:
- - Better approach to battery setting, read more data, properly
+ - When wireless_status is added, unknown_data will need to be updated
+ - See if the battery request packet can be done via hid
  - Check which calls are actually needed to read data (parse?)
  - Check which headers are actually required
  - Clean up code
