@@ -382,15 +382,11 @@ MODULE_DESCRIPTION("HID driver for Corsair Void headsets");
 
 /* Planned attributes: (ask Corsair for datasheet)
  - firmware revision
- - hardware revision
+ - hardware revision (look at Logitech for these two)
  - wireless_status
+ - mic status? (probably need something custom)
  - Check Logitech driver + Corsair windows driver + headsetcontrol to build complete list
  - Check documentation for more battery properties
-*/
-
-/* Plans:
- - Create full list of planned features (LEDs, notification, sidetone, mic status)
- - Create full list of device and battery attributes planned
 */
 
 /* Device boilerplate fixes:

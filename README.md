@@ -13,11 +13,11 @@
   - Kernel headers are responsible for the install, look for `/usr/lib/modules/[KERNEL VERSION]/extra/corsair-void.ko` to remove it
 
 ## Features
-  - [ ] Battery reporting
+  - [x] Battery reporting
   - [ ] LED support (on / off, brightness, colour)
   - [ ] Sidetone support
   - [ ] Notification support
-  - [ ] Misc sysfs attributes (firmware revision, hardware revision, mic status, etc)
+  - [ ] Misc sysfs attributes (firmware revision, hardware revision, mic status, wireless status, etc)
 
 ## References:
   - [headsetcontrol](https://github.com/Sapd/HeadsetControl/blob/master/src/devices/corsair_void.c)
