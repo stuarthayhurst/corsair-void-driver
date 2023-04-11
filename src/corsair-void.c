@@ -81,6 +81,7 @@ struct corsair_void_battery_data {
 #define CORSAIR_VOID_ALL_BITS 0x07
 
 struct corsair_void_raw_receiver_info {
+	bool waiting;
 	struct completion query_completed;
 	unsigned char received_bits;
 
@@ -116,8 +117,10 @@ static int corsair_void_query_receiver(struct corsair_void_drvdata *drvdata)
 	unsigned long expire = 0;
 
 	//Prepare a completion to wait for return data
-	init_completion(&raw_receiver_info->query_completed);
-	raw_receiver_info->received_bits = 0;
+	if (!raw_receiver_info->waiting) {
+	  init_completion(&raw_receiver_info->query_completed);
+	  raw_receiver_info->received_bits = 0;
+	}
 
 	ret = usb_control_msg_send(usb_dev, 0,
 			CORSAIR_VOID_CONTROL_REQUEST, CORSAIR_VOID_CONTROL_REQUEST_TYPE,
@@ -136,11 +139,14 @@ static int corsair_void_query_receiver(struct corsair_void_drvdata *drvdata)
 	  - In reality, it takes much less time than this
 	*/
 	expire = msecs_to_jiffies(500);
+	raw_receiver_info->waiting = true;
 	if (!wait_for_completion_timeout(&raw_receiver_info->query_completed, expire)) {
 		ret = -ETIMEDOUT;
 		printk(KERN_WARNING DRIVER_NAME": failed to query receiver data (reason %i)", ret);
+		raw_receiver_info->waiting = false;
 		goto unknown_data;
 	}
+	raw_receiver_info->waiting = false;
 
 	//Check connection and battery status to set battery data
 	if (raw_receiver_info->connection_status != 1) {
