@@ -46,6 +46,7 @@ PROPERTY: USAGE CODE RANGE
 #include <linux/module.h>
 #include <linux/usb.h>
 #include <linux/power_supply.h>
+#include <linux/completion.h>
 
 #include "hid-ids.h"
 
@@ -374,15 +375,10 @@ MODULE_AUTHOR("Stuart Hayhurst");
 MODULE_DESCRIPTION("HID driver for Corsair Void headsets");
 
 
-//TODO: need to check low battery status still works
-//TODO: take out a mutex? / set a flag on the wait, to avoid multiple calls
-//TODO: Update plans + README
-
 /*TODO:
  - When wireless_status is added, unknown_data will need to be updated
  - See if the battery request packet can be done via hid
  - Check which calls are actually needed to read data (parse?)
- - Check which headers are actually required
  - Clean up code
 */
 
