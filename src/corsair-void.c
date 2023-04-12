@@ -261,12 +261,12 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 	psy_cfg.drv_data = drvdata;
 
 	ret = hid_parse(hid_dev);
-	if (ret != 0) {
+	if (ret) {
 		hid_err(hid_dev, "parse failed\n");
 		return ret;
 	}
 	ret = hid_hw_start(hid_dev, HID_CONNECT_DEFAULT);
-	if (ret != 0) {
+	if (ret) {
 		hid_err(hid_dev, "hw start failed\n");
 		return ret;
 	}
@@ -294,7 +294,10 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 		goto failed;
 	}
 
-	power_supply_powers(drvdata->batt, dev);
+	ret = power_supply_powers(drvdata->batt, dev);
+	if (ret) {
+		goto failed;
+	}
 
 	goto success;
 
