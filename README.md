@@ -16,7 +16,8 @@
   - [x] Battery reporting
   - [ ] LED support (on / off, brightness, colour)
   - [ ] Sidetone support
-  - [x] Notification support
+  - [x] Alert support
+    - `send_alert: [0 / 1]`
   - [ ] Misc sysfs attributes (firmware revision, hardware revision, mic status, wireless status, etc)
 
 ## References:
