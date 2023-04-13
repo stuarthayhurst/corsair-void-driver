@@ -17,7 +17,7 @@
   - [ ] LED support (on / off, brightness, colour)
   - [ ] Sidetone support
   - [x] Alert support
-    - `send_alert: [0 / 1]`
+    - `send_alert: [0 / 1] (write-only)`
   - [ ] Misc sysfs attributes (firmware revision, hardware revision, mic status, wireless status, etc)
 
 ## References:
