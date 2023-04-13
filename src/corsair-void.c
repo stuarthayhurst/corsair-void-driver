@@ -56,8 +56,10 @@ PROPERTY: USAGE CODE RANGE
 
 #define CORSAIR_VOID_CONTROL_REQUEST 0x09
 #define CORSAIR_VOID_CONTROL_REQUEST_TYPE 0x21
-#define CORSAIR_VOID_CONTROL_VALUE 0x02c9
 #define CORSAIR_VOID_CONTROL_INDEX 3
+
+#define CORSAIR_VOID_CONTROL_BATT_VALUE 0x02C9
+#define CORSAIR_VOID_CONTROL_ALERT_VALUE 0x02CA
 
 static enum power_supply_property corsair_void_battery_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
@@ -125,7 +127,7 @@ static int corsair_void_query_receiver(struct corsair_void_drvdata *drvdata)
 
 	ret = usb_control_msg_send(usb_dev, 0,
 			CORSAIR_VOID_CONTROL_REQUEST, CORSAIR_VOID_CONTROL_REQUEST_TYPE,
-			CORSAIR_VOID_CONTROL_VALUE, CORSAIR_VOID_CONTROL_INDEX,
+			CORSAIR_VOID_CONTROL_BATT_VALUE, CORSAIR_VOID_CONTROL_INDEX,
 			send_buf, 2,
 			USB_CTRL_SET_TIMEOUT, GFP_KERNEL);
 
@@ -236,6 +238,69 @@ static int corsair_void_battery_get_property(struct power_supply *psy,
 	return ret;
 }
 
+static ssize_t corsair_void_send_alert(struct device *dev,
+				       struct device_attribute *attr,
+				       const char *buf, size_t count)
+{
+	int ret = 0;
+
+	struct usb_interface *usb_if = to_usb_interface(dev->parent);
+	struct usb_device *usb_dev = interface_to_usbdev(usb_if);
+
+	unsigned char* send_buf;
+	int alert_id;
+
+	ret = kstrtoint(buf, 10, &alert_id);
+	if (ret) {
+		return -EINVAL;
+	}
+
+	//Only accept 0 or 1 for alert ID
+	if (alert_id != 0 && alert_id != 1) {
+		return -EINVAL;
+	}
+
+	send_buf = kmalloc(3, GFP_KERNEL);
+	if (!send_buf) {
+		ret = -ENOMEM;
+		goto failed_alloc;
+	}
+
+	//Packet format to send alert with ID alert_id
+	send_buf[0] = 0xCA;
+	send_buf[1] = 0x02;
+	send_buf[2] = alert_id;
+
+	ret = usb_control_msg_send(usb_dev, 0,
+			CORSAIR_VOID_CONTROL_REQUEST, CORSAIR_VOID_CONTROL_REQUEST_TYPE,
+			CORSAIR_VOID_CONTROL_ALERT_VALUE, CORSAIR_VOID_CONTROL_INDEX,
+			send_buf, 3,
+			USB_CTRL_SET_TIMEOUT, GFP_KERNEL);
+
+	if (ret) {
+		dev_warn(dev, "Failed to send alert request (reason %i)", ret);
+		goto failed;
+	}
+
+	ret = count;
+failed:
+	kfree(send_buf);
+failed_alloc:
+	return ret;
+}
+
+//Write-only alert, as it only plays a sound (nothing to report back)
+static DEVICE_ATTR(send_alert, 0200, NULL, corsair_void_send_alert);
+
+static struct attribute *corsair_void_attrs[] = {
+	&dev_attr_send_alert.attr,
+	NULL,
+};
+
+static const struct attribute_group corsair_void_attr_group = {
+	.attrs = corsair_void_attrs,
+};
+
 static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_device_id *hid_id)
 {
 	int ret = 0;
@@ -299,6 +364,11 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 		goto failed;
 	}
 
+	ret = sysfs_create_group(&dev->kobj, &corsair_void_attr_group);
+	if (ret) {
+		goto failed;
+	}
+
 	goto success;
 
 failed:
@@ -309,6 +379,7 @@ success:
 
 static void corsair_void_remove(struct hid_device *hid_dev)
 {
+	sysfs_remove_group(&hid_dev->dev.kobj, &corsair_void_attr_group);
 	hid_hw_stop(hid_dev);
 }
 
@@ -377,10 +448,10 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Stuart Hayhurst");
 MODULE_DESCRIPTION("HID driver for Corsair Void headsets");
 
-
-/*TODO:
+/* TODO:
+ - Document sysfs attributes (+ power_supply? doubt it)
  - When wireless_status is added, unknown_data will need to be updated
- - See if the battery request packet can be done via hid
+ - See if the battery + alert packets can be done via hid
  - Check which calls are actually needed to read data (parse?)
  - Clean up code
 */
@@ -392,10 +463,6 @@ MODULE_DESCRIPTION("HID driver for Corsair Void headsets");
  - mic status? (probably need something custom)
  - Check Logitech driver + Corsair windows driver + headsetcontrol to build complete list
  - Check documentation for more battery properties
-*/
-
-/* Device boilerplate fixes:
- - Look into device matching (avoids large table)
 */
 
 /* Code style fixes:
