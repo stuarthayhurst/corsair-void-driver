@@ -106,6 +106,59 @@ struct corsair_void_drvdata {
 	struct power_supply_desc batt_desc;
 };
 
+static void corsair_void_set_unknown_battery(struct corsair_void_battery_data *batt_data)
+{
+	batt_data->status = POWER_SUPPLY_STATUS_UNKNOWN;
+	batt_data->present = 0;
+	batt_data->capacity = 0;
+	batt_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
+}
+
+static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata) {
+	struct corsair_void_raw_receiver_info *raw_receiver_info = &drvdata->raw_receiver_info;
+	struct corsair_void_battery_data *batt_data = &drvdata->battery_data;
+
+	//Check connection and battery status to set battery data
+	if (raw_receiver_info->connection_status != 1) {
+		//Headset not connected
+		goto unknown_data;
+	} else if (raw_receiver_info->battery_status == 0) {
+		//Battery information unavailable
+		goto unknown_data;
+	} else {
+		//Battery connected
+		batt_data->present = 1;
+		batt_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_NORMAL;
+
+		//Set battery status
+		switch (raw_receiver_info->battery_status) {
+		case 1:
+		case 2: //Battery normal / low
+			batt_data->status = POWER_SUPPLY_STATUS_DISCHARGING;
+			if (raw_receiver_info->battery_status == 2) {
+				batt_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_LOW;
+			}
+
+			break;
+		case 4:
+		case 5: //Battery charging
+			batt_data->status = POWER_SUPPLY_STATUS_CHARGING;
+			break;
+		default:
+			goto unknown_data;
+			break;
+		}
+
+		batt_data->capacity = raw_receiver_info->battery_capacity;
+	}
+
+	goto success;
+unknown_data:
+	corsair_void_set_unknown_battery(batt_data);
+success:
+	return;
+}
+
 static int corsair_void_query_receiver(struct corsair_void_drvdata *drvdata)
 {
 	int ret = 0;
@@ -151,46 +204,11 @@ static int corsair_void_query_receiver(struct corsair_void_drvdata *drvdata)
 	}
 	raw_receiver_info->waiting = false;
 
-	//Check connection and battery status to set battery data
-	if (raw_receiver_info->connection_status != 1) {
-		//Headset not connected
-		goto unknown_data;
-	} else if (raw_receiver_info->battery_status == 0) {
-		//Battery information unavailable
-		goto unknown_data;
-	} else {
-		//Battery connected
-		batt_data->present = 1;
-		batt_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_NORMAL;
-
-		//Set battery status
-		switch (raw_receiver_info->battery_status) {
-		case 1:
-		case 2: //Battery normal / low
-			batt_data->status = POWER_SUPPLY_STATUS_DISCHARGING;
-			if (raw_receiver_info->battery_status == 2) {
-				batt_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_LOW;
-			}
-
-			break;
-		case 4:
-		case 5: //Battery charging
-			batt_data->status = POWER_SUPPLY_STATUS_CHARGING;
-			break;
-		default:
-			goto unknown_data;
-			break;
-		}
-
-		batt_data->capacity = raw_receiver_info->battery_capacity;
-	}
+	corsair_void_process_receiver(drvdata);
 
 goto success;
 unknown_data:
-	batt_data->status = POWER_SUPPLY_STATUS_UNKNOWN;
-	batt_data->present = 0;
-	batt_data->capacity = 0;
-	batt_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
+	corsair_void_set_unknown_battery(batt_data);
 success:
 	return ret;
 }
