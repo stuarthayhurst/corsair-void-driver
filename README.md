@@ -18,7 +18,11 @@
   - [ ] Sidetone support
   - [x] Alert support
     - `send_alert: [0 / 1] (write-only)`
-  - [ ] Misc sysfs attributes (firmware revision, hardware revision, mic status, wireless status, etc)
+  - [ ] Misc device / kernel attributes
+    - [x] `(USB) wireless_status` (untested - requires kernel 6.4+)
+    - [ ] `(sysfs) hardware_version`
+    - [ ] `(sysfs) firmware_version`
+    - [ ] `(?) mic_status(?)` (unsure - needs an example of hardware mute reporting)
 
 ## References:
   - [headsetcontrol](https://github.com/Sapd/HeadsetControl/blob/master/src/devices/corsair_void.c)

@@ -48,6 +48,8 @@ PROPERTY: USAGE CODE RANGE
 #include <linux/power_supply.h>
 #include <linux/completion.h>
 
+#include <linux/version.h>
+
 #include "hid-ids.h"
 
 #define CORSAIR_VOID_BATT_CAPACITY_USAGE -3866512
@@ -101,17 +103,37 @@ struct corsair_void_drvdata {
 
 	struct corsair_void_raw_receiver_info raw_receiver_info;
 	struct corsair_void_battery_data battery_data;
+	bool headset_connected;
 
 	struct power_supply *batt;
 	struct power_supply_desc batt_desc;
 };
 
-static void corsair_void_set_unknown_battery(struct corsair_void_battery_data *batt_data)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
+static void corsair_void_set_wireless_status(struct corsair_void_drvdata *drvdata)
 {
+	struct usb_interface *usb_if = to_usb_interface(drvdata->dev->parent);
+
+	usb_set_wireless_status(usb_if, drvdata->headset_connected ?
+					USB_WIRELESS_STATUS_CONNECTED :
+					USB_WIRELESS_STATUS_DISCONNECTED);
+}
+#endif
+
+static void corsair_void_set_unknown_data(struct corsair_void_drvdata *drvdata)
+{
+	struct corsair_void_battery_data *batt_data = &drvdata->battery_data;
+
 	batt_data->status = POWER_SUPPLY_STATUS_UNKNOWN;
 	batt_data->present = 0;
 	batt_data->capacity = 0;
 	batt_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
+
+	drvdata->headset_connected = false;
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
+	corsair_void_set_wireless_status(drvdata);
+#endif
 }
 
 static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata) {
@@ -129,6 +151,7 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata) 
 		//Battery connected
 		batt_data->present = 1;
 		batt_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_NORMAL;
+		drvdata->headset_connected = true;
 
 		//Set battery status
 		switch (raw_receiver_info->battery_status) {
@@ -152,9 +175,13 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata) 
 		batt_data->capacity = raw_receiver_info->battery_capacity;
 	}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
+	corsair_void_set_wireless_status(drvdata);
+#endif
+
 	goto success;
 unknown_data:
-	corsair_void_set_unknown_battery(batt_data);
+	corsair_void_set_unknown_data(drvdata);
 success:
 	return;
 }
@@ -167,7 +194,6 @@ static int corsair_void_query_receiver(struct corsair_void_drvdata *drvdata)
 	struct usb_device *usb_dev = interface_to_usbdev(usb_if);
 
 	struct corsair_void_raw_receiver_info *raw_receiver_info = &drvdata->raw_receiver_info;
-	struct corsair_void_battery_data *batt_data = &drvdata->battery_data;
 
 	unsigned char send_buf[2] = {0xC9, 0x64};
 	unsigned long expire = 0;
@@ -206,7 +232,7 @@ static int corsair_void_query_receiver(struct corsair_void_drvdata *drvdata)
 
 goto success;
 unknown_data:
-	corsair_void_set_unknown_battery(batt_data);
+	corsair_void_set_unknown_data(drvdata);
 success:
 	return ret;
 }
@@ -470,18 +496,13 @@ MODULE_AUTHOR("Stuart Hayhurst");
 MODULE_DESCRIPTION("HID driver for Corsair Void headsets");
 
 /* TODO:
- - Document sysfs attributes (+ power_supply? doubt it)
- - When wireless_status is added, unknown_data will need to be updated
+ - Document driver attributes (list from README)
  - See if the battery + alert packets can be done via hid
  - Check which calls are actually needed to read data (parse?)
- - Clean up code
+ - Test wireless_status on kernel 6.4
 */
 
 /* Planned attributes: (ask Corsair for datasheet)
- - firmware revision
- - hardware revision (look at Logitech for these two)
- - wireless_status
- - mic status? (probably need something custom)
  - Check Logitech driver + Corsair windows driver + headsetcontrol to build complete list
  - Check documentation for more battery properties
 */
@@ -489,4 +510,5 @@ MODULE_DESCRIPTION("HID driver for Corsair Void headsets");
 /* Code style fixes:
  - Check against kernel programming style
  - Check tabs / spaces
+ - Check line length
 */
