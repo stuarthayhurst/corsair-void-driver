@@ -342,7 +342,7 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 	name = devm_kzalloc(dev, 14, GFP_KERNEL);
 	if (!name) {
 		ret = -ENOMEM;
-		goto failed;
+		goto failed_after_hid_start;
 	}
 	sprintf(name, "hid-%02d-battery", hid_dev->id);
 
@@ -356,22 +356,26 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 	if (IS_ERR(drvdata->batt)) {
 		dev_err(drvdata->dev, "failed to register battery\n");
 		ret = PTR_ERR(drvdata->batt);
-		goto failed;
+		goto failed_after_hid_start;
 	}
 
 	ret = power_supply_powers(drvdata->batt, dev);
 	if (ret) {
-		goto failed;
+		goto failed_after_hid_start;
 	}
 
 	ret = sysfs_create_group(&dev->kobj, &corsair_void_attr_group);
 	if (ret) {
-		goto failed;
+		goto failed_after_hid_start;
 	}
+
+	//Any failures after here should go to failed_after_sysfs
 
 	goto success;
 
-failed:
+//failed_after_sysfs:
+//	sysfs_remove_group(&hid_dev->dev.kobj, &corsair_void_attr_group);
+failed_after_hid_start:
 	hid_hw_stop(hid_dev);
 success:
 	return ret;
