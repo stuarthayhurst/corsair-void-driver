@@ -103,7 +103,6 @@ struct corsair_void_drvdata {
 
 	struct corsair_void_raw_receiver_info raw_receiver_info;
 	struct corsair_void_battery_data battery_data;
-	bool headset_connected;
 
 	struct power_supply *batt;
 	struct power_supply_desc batt_desc;
@@ -114,7 +113,7 @@ static void corsair_void_set_wireless_status(struct corsair_void_drvdata *drvdat
 {
 	struct usb_interface *usb_if = to_usb_interface(drvdata->dev->parent);
 
-	usb_set_wireless_status(usb_if, drvdata->headset_connected ?
+	usb_set_wireless_status(usb_if, drvdata->batt_data->present ?
 					USB_WIRELESS_STATUS_CONNECTED :
 					USB_WIRELESS_STATUS_DISCONNECTED);
 }
@@ -128,8 +127,6 @@ static void corsair_void_set_unknown_data(struct corsair_void_drvdata *drvdata)
 	batt_data->present = 0;
 	batt_data->capacity = 0;
 	batt_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
-
-	drvdata->headset_connected = false;
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
 	corsair_void_set_wireless_status(drvdata);
@@ -151,7 +148,6 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata) 
 		//Battery connected
 		batt_data->present = 1;
 		batt_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_NORMAL;
-		drvdata->headset_connected = true;
 
 		//Set battery status
 		switch (raw_receiver_info->battery_status) {
