@@ -401,6 +401,8 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 		goto failed_after_hid_start;
 	}
 
+	corsair_void_set_unknown_data(drvdata);
+
 	ret = power_supply_powers(drvdata->batt, dev);
 	if (ret) {
 		goto failed_after_hid_start;
