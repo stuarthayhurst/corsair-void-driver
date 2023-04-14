@@ -204,8 +204,6 @@ static int corsair_void_query_receiver(struct corsair_void_drvdata *drvdata)
 	}
 	raw_receiver_info->waiting = false;
 
-	corsair_void_process_receiver(drvdata);
-
 goto success;
 unknown_data:
 	corsair_void_set_unknown_battery(batt_data);
@@ -429,6 +427,7 @@ static int corsair_void_event(struct hid_device *hid_dev, struct hid_field *fiel
 
 	//When all expected attributes have been detected, finish
 	if (drvdata->raw_receiver_info.received_bits & CORSAIR_VOID_ALL_BITS) {
+		corsair_void_process_receiver(drvdata);
 		complete(&drvdata->raw_receiver_info.query_completed);
 	}
 
