@@ -1,5 +1,6 @@
 ## corsair-void-driver
   - Linux kernel driver for the Corsair Void family of headsets
+    - Includes the Corsair Void Pro / Elite / RGB headsets
     - This is experimental, expect issues
   - Requires kernel headers to be installed
   - I'll eventually upstream this driver, but I'd rather get it feature-complete and stable first
