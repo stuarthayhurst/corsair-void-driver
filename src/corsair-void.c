@@ -450,7 +450,7 @@ static int corsair_void_event(struct hid_device *hid_dev, struct hid_field *fiel
 	}
 
 	//When all expected attributes have been detected, finish
-	if (drvdata->raw_receiver_info.received_bits & CORSAIR_VOID_ALL_BITS) {
+	if (drvdata->raw_receiver_info.received_bits == CORSAIR_VOID_ALL_BITS) {
 		corsair_void_process_receiver(drvdata);
 		complete(&drvdata->raw_receiver_info.query_completed);
 	}
