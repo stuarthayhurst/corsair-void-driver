@@ -10,8 +10,9 @@
 /* ------------------------------------------------------------------------- */
 /*
  - When queried, the receiver reponds with 5 bytes to describe the battery
+  - The power button, mute button and move the mic alsp trigger this report
  - This includes connection + battery status, capacity, mic + power button status
- - The information below may not be perfect, as it's been gathered througn guesses
+ - The information below may not be perfect, as it's been gathered throug guesses
 
 INDEX: PROPERTY
  0: REPORT ID
@@ -21,9 +22,13 @@ INDEX: PROPERTY
   - Largest bit is 1 when power button pressed
 
  2: BATTERY CAPACITY + MIC STATUS
-  - Seems to report ~54 higher than reality when charging
-  - Seems to be capped at 100
-  - Largest bit is set to 1 when the mic is physically up
+  - Battery capacity:
+   - Seems to report ~54 higher than reality when charging
+   - Seems to be capped at 100
+  - Microphone status:
+   - Largest bit is set to 1 when the mic is physically up
+   - No bits change when the mic is muted, only when physically moved
+   - This report is sent every time the mic is moved, no polling required
 
  3: CONNECTION STATUS
   - 38: Initialising
@@ -503,10 +508,3 @@ module_hid_driver(corsair_void_driver);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Stuart Hayhurst");
 MODULE_DESCRIPTION("HID driver for Corsair Void headsets");
-
-/* TODO:
- - Document driver attributes (list from README)
- - See if the battery + alert packets can be done via hid
- - Check which calls are actually needed to read data (parse?)
- - Test wireless_status on kernel 6.4
-*/

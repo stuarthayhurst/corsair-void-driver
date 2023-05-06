@@ -23,7 +23,7 @@
     - [x] `(USB) wireless_status` (untested - requires kernel 6.4+)
     - [ ] `(sysfs) hardware_version`
     - [ ] `(sysfs) firmware_version`
-    - [ ] `(?) mic_status(?)` (unsure - needs an example of hardware mute reporting)
+    - [x] `(sysfs) microphone_up: [0 / 1] (read-only)`
 
 ## References:
   - [headsetcontrol](https://github.com/Sapd/HeadsetControl/blob/master/src/devices/corsair_void.c)
