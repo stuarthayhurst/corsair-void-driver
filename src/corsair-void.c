@@ -265,6 +265,10 @@ static int corsair_void_battery_get_property(struct power_supply *psy,
 query_required:
 	ret = corsair_void_query_receiver(drvdata);
 
+	if (ret) {
+		goto query_failed;
+	}
+
 	switch (prop) {
 		case POWER_SUPPLY_PROP_STATUS:
 			val->intval = drvdata->battery_data.status;
@@ -283,6 +287,7 @@ query_required:
 			break;
 	}
 
+query_failed:
 	return ret;
 }
 
