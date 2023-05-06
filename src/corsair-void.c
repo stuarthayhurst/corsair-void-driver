@@ -289,7 +289,7 @@ static ssize_t corsair_void_report_mic_up(struct device *dev,
 					  char* buf)
 {
 
-	struct corsair_void_drvdata* drvdata = dev->driver_data;
+	struct corsair_void_drvdata* drvdata = dev_get_drvdata(dev);
 
 	return sysfs_emit(buf, "%i\n", drvdata->mic_up);
 }
@@ -382,7 +382,7 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 	}
 	hid_set_drvdata(hid_dev, drvdata);
 	psy_cfg.drv_data = drvdata;
-	dev->driver_data = drvdata;
+	dev_set_drvdata(dev, drvdata);
 
 	ret = hid_parse(hid_dev);
 	if (ret) {
