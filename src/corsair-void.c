@@ -96,6 +96,7 @@ struct corsair_void_drvdata {
 
 	struct corsair_void_raw_receiver_info raw_receiver_info;
 	struct corsair_void_battery_data battery_data;
+	int mic_up;
 
 	struct power_supply *batt;
 	struct power_supply_desc batt_desc;
@@ -283,6 +284,16 @@ query_failed:
 	return ret;
 }
 
+static ssize_t corsair_void_report_mic_up(struct device *dev,
+					  struct device_attribute *attr,
+					  char* buf)
+{
+
+	struct corsair_void_drvdata* drvdata = dev->driver_data;
+
+	return sysfs_emit(buf, "%i\n", drvdata->mic_up);
+}
+
 static ssize_t corsair_void_send_alert(struct device *dev,
 				       struct device_attribute *attr,
 				       const char *buf, size_t count)
@@ -334,10 +345,12 @@ failed_alloc:
 	return ret;
 }
 
+static DEVICE_ATTR(microphone_up, 0444, corsair_void_report_mic_up, NULL);
 //Write-only alert, as it only plays a sound (nothing to report back)
 static DEVICE_ATTR(send_alert, 0200, NULL, corsair_void_send_alert);
 
 static struct attribute *corsair_void_attrs[] = {
+	&dev_attr_microphone_up.attr,
 	&dev_attr_send_alert.attr,
 	NULL,
 };
@@ -369,6 +382,7 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 	}
 	hid_set_drvdata(hid_dev, drvdata);
 	psy_cfg.drv_data = drvdata;
+	dev->driver_data = drvdata;
 
 	ret = hid_parse(hid_dev);
 	if (ret) {
@@ -396,6 +410,8 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 	drvdata->batt_desc.properties = corsair_void_battery_props;
 	drvdata->batt_desc.num_properties = ARRAY_SIZE(corsair_void_battery_props);
 	drvdata->batt_desc.get_property = corsair_void_battery_get_property;
+
+	drvdata->mic_up = 0;
 
 	drvdata->batt = devm_power_supply_register(dev, &drvdata->batt_desc, &psy_cfg);
 	if (IS_ERR(drvdata->batt)) {
@@ -443,6 +459,8 @@ static int corsair_void_raw_event(struct hid_device *hid_dev, struct hid_report 
 		drvdata->raw_receiver_info.battery_capacity = data[2] & ~CORSAIR_VOID_MIC_UP;
 		drvdata->raw_receiver_info.connection_status = data[3];
 		drvdata->raw_receiver_info.battery_status = data[4];
+
+		drvdata->mic_up = (data[2] & CORSAIR_VOID_MIC_UP) ? 1 : 0;
 
 		corsair_void_process_receiver(drvdata);
 		complete(&drvdata->raw_receiver_info.query_completed);
