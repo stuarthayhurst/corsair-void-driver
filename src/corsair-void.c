@@ -499,14 +499,3 @@ MODULE_DESCRIPTION("HID driver for Corsair Void headsets");
  - Check which calls are actually needed to read data (parse?)
  - Test wireless_status on kernel 6.4
 */
-
-/* Planned attributes: (ask Corsair for datasheet)
- - Check Logitech driver + Corsair windows driver + headsetcontrol to build complete list
- - Check documentation for more battery properties
-*/
-
-/* Code style fixes:
- - Check against kernel programming style
- - Check tabs / spaces
- - Check line length
-*/
