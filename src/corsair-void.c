@@ -9,34 +9,34 @@
 /* Receiver report information: (ID 100)                                     */
 /* ------------------------------------------------------------------------- */
 /*
- - When queried, the receiver seems to respond with a lot of data for little information, as HID event
- - The following information has been observed for report ID 100
+ - When queried, the receiver reponds with 5 bytes to describe the battery
+ - This includes connection + battery status, capacity, mic + power button status
+ - The information below may not be perfect, as it's been gathered througn guesses
 
-PROPERTY: USAGE CODE RANGE
-  (?): -3866520 -> -3866513
-    - Seems to always be 0
+INDEX: PROPERTY
+ 0: REPORT ID
+  - 100 for the battery packet
 
-  BATTERY CAPACITY: -3866512
-    - Seems to report 54 higher than reality when charging
-    - Seems to be capped at 100
+ 1: POWER BUTTON + (?)
+  - Largest bit is 1 when power button pressed
 
-  CONNECTION STATUS: -3866511
-    - 0: Disconnected
-    - 1: Connected
-    - 3: Searching
-    - 6: Initialising
+ 2: BATTERY CAPACITY + MIC STATUS
+  - Seems to report ~54 higher than reality when charging
+  - Seems to be capped at 100
+  - Largest bit is set to 1 when the mic is physically up
 
-  (?): -3866509 -> -3866510
-    - Seems to always be 1
+ 3: CONNECTION STATUS
+  - 38: Initialising
+  - 49: Lost connection
+  - 51: Disconnected, searching
+  - 52: Disconnected, not searching
+  - 177: Normal
 
-  (?): -3866508
-    - Seems to always be 0
-
-  BATTERY STATUS: -3866507
-    - 0     : Disconnected
-    - 1 / 2 : Normal / low
-    - 3     : Unknown (not seen)
-    - 4 / 5 : Charging
+ 4: BATTERY STATUS
+  - 0     : Disconnected
+  - 1 / 2 : Normal / low
+  - 3     : Unknown (not seen)
+  - 4 / 5 : Charging
 */
 /* ------------------------------------------------------------------------- */
 
@@ -52,16 +52,15 @@ PROPERTY: USAGE CODE RANGE
 
 #include "hid-ids.h"
 
-#define CORSAIR_VOID_BATT_CAPACITY_USAGE -3866512
-#define CORSAIR_VOID_CONNECTION_USAGE -3866511
-#define CORSAIR_VOID_BATT_STATUS_USAGE -3866507
-
 #define CORSAIR_VOID_CONTROL_REQUEST 0x09
 #define CORSAIR_VOID_CONTROL_REQUEST_TYPE 0x21
 #define CORSAIR_VOID_CONTROL_INDEX 3
 
 #define CORSAIR_VOID_CONTROL_BATT_VALUE 0x02C9
 #define CORSAIR_VOID_CONTROL_ALERT_VALUE 0x02CA
+
+#define CORSAIR_VOID_BATTERY_REPORT_ID 100
+#define CORSAIR_VOID_MIC_UP 128
 
 static enum power_supply_property corsair_void_battery_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
@@ -80,15 +79,9 @@ struct corsair_void_battery_data {
 	int capacity_level;
 };
 
-#define CORSAIR_VOID_CAPACITY_BIT 0x01
-#define CORSAIR_VOID_CONNECTION_BIT 0x02
-#define CORSAIR_VOID_STATUS_BIT 0x04
-#define CORSAIR_VOID_ALL_BITS 0x07
-
 struct corsair_void_raw_receiver_info {
 	bool waiting;
 	struct completion query_completed;
-	unsigned char received_bits;
 
 	int battery_capacity;
 	int connection_status;
@@ -138,7 +131,7 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata) 
 	struct corsair_void_battery_data *batt_data = &drvdata->battery_data;
 
 	//Check connection and battery status to set battery data
-	if (raw_receiver_info->connection_status != 1) {
+	if (raw_receiver_info->connection_status != 177) {
 		//Headset not connected
 		goto unknown_data;
 	} else if (raw_receiver_info->battery_status == 0) {
@@ -197,7 +190,6 @@ static int corsair_void_query_receiver(struct corsair_void_drvdata *drvdata)
 	//Prepare a completion to wait for return data
 	if (!raw_receiver_info->waiting) {
 	  init_completion(&raw_receiver_info->query_completed);
-	  raw_receiver_info->received_bits = 0;
 	}
 
 	ret = usb_control_msg_send(usb_dev, 0,
@@ -442,30 +434,16 @@ static void corsair_void_remove(struct hid_device *hid_dev)
 	hid_hw_stop(hid_dev);
 }
 
-static int corsair_void_event(struct hid_device *hid_dev, struct hid_field *field,
-			      struct hid_usage *usage, __s32 value)
+static int corsair_void_raw_event(struct hid_device *hid_dev, struct hid_report *hid_report, u8* data, int size)
 {
 	struct corsair_void_drvdata *drvdata = hid_get_drvdata(hid_dev);
 
-	switch (usage->hid) {
-	case CORSAIR_VOID_BATT_CAPACITY_USAGE:
-		drvdata->raw_receiver_info.battery_capacity = value;
-		drvdata->raw_receiver_info.received_bits |= CORSAIR_VOID_CAPACITY_BIT;
-		break;
-	case CORSAIR_VOID_CONNECTION_USAGE:
-		drvdata->raw_receiver_info.connection_status = value;
-		drvdata->raw_receiver_info.received_bits |= CORSAIR_VOID_CONNECTION_BIT;
-		break;
-	case CORSAIR_VOID_BATT_STATUS_USAGE:
-		drvdata->raw_receiver_info.battery_status = value;
-		drvdata->raw_receiver_info.received_bits |= CORSAIR_VOID_STATUS_BIT;
-		break;
-	default:
-		break;
-	}
+	if (hid_report->id == CORSAIR_VOID_BATTERY_REPORT_ID) {
+		//Description of packet is documented at the top of this file
+		drvdata->raw_receiver_info.battery_capacity = data[2] & ~CORSAIR_VOID_MIC_UP;
+		drvdata->raw_receiver_info.connection_status = data[3];
+		drvdata->raw_receiver_info.battery_status = data[4];
 
-	//When all expected attributes have been detected, finish
-	if (drvdata->raw_receiver_info.received_bits == CORSAIR_VOID_ALL_BITS) {
 		corsair_void_process_receiver(drvdata);
 		complete(&drvdata->raw_receiver_info.query_completed);
 	}
@@ -499,7 +477,7 @@ static struct hid_driver corsair_void_driver = {
 	.id_table = corsair_void_devices,
 	.probe = corsair_void_probe,
 	.remove = corsair_void_remove,
-	.event = corsair_void_event,
+	.raw_event = corsair_void_raw_event,
 };
 
 module_hid_driver(corsair_void_driver);
