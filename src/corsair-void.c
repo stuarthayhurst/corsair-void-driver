@@ -240,6 +240,29 @@ static int corsair_void_battery_get_property(struct power_supply *psy,
 	struct corsair_void_drvdata *drvdata = power_supply_get_drvdata(psy);
 	int ret = 0;
 
+	//Handle any properties that don't require a query
+	switch (psp) {
+		case POWER_SUPPLY_PROP_SCOPE:
+			val->intval = POWER_SUPPLY_SCOPE_DEVICE;
+			break;
+		case POWER_SUPPLY_PROP_MODEL_NAME:
+			char *name = drvdata->hid_dev->name;
+			if (!strncmp(name, "Corsair ", 8))
+				val->strval = name + 8;
+			else
+				val->strval = name;
+			break;
+		case POWER_SUPPLY_PROP_MANUFACTURER:
+			val->strval = "Corsair";
+			break;
+		default:
+			goto query_required;
+			break;
+	}
+
+	return ret;
+
+query_required:
 	ret = corsair_void_query_receiver(drvdata);
 
 	switch (psp) {
@@ -254,19 +277,6 @@ static int corsair_void_battery_get_property(struct power_supply *psy,
 			break;
 		case POWER_SUPPLY_PROP_CAPACITY_LEVEL:
 			val->intval = drvdata->battery_data.capacity_level;
-			break;
-		case POWER_SUPPLY_PROP_SCOPE:
-			val->intval = POWER_SUPPLY_SCOPE_DEVICE;
-			break;
-		case POWER_SUPPLY_PROP_MODEL_NAME:
-			char *name = drvdata->hid_dev->name;
-			if (!strncmp(name, "Corsair ", 8))
-				val->strval = name + 8;
-			else
-				val->strval = name;
-			break;
-		case POWER_SUPPLY_PROP_MANUFACTURER:
-			val->strval = "Corsair";
 			break;
 		default:
 			ret = -EINVAL;
