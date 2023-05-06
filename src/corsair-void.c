@@ -234,14 +234,14 @@ success:
 }
 
 static int corsair_void_battery_get_property(struct power_supply *psy,
-					     enum power_supply_property psp,
+					     enum power_supply_property prop,
 					     union power_supply_propval *val)
 {
 	struct corsair_void_drvdata *drvdata = power_supply_get_drvdata(psy);
 	int ret = 0;
 
 	//Handle any properties that don't require a query
-	switch (psp) {
+	switch (prop) {
 		case POWER_SUPPLY_PROP_SCOPE:
 			val->intval = POWER_SUPPLY_SCOPE_DEVICE;
 			break;
@@ -265,7 +265,7 @@ static int corsair_void_battery_get_property(struct power_supply *psy,
 query_required:
 	ret = corsair_void_query_receiver(drvdata);
 
-	switch (psp) {
+	switch (prop) {
 		case POWER_SUPPLY_PROP_STATUS:
 			val->intval = drvdata->battery_data.status;
 			break;
