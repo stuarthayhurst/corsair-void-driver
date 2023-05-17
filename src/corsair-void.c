@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * HID driver for Corsair Void headsets
+ * Report issues to https://github.com/stuarthayhurst/corsair-void-driver/issues
 
  * Copyright (c) 2023 Stuart Hayhurst
 */
