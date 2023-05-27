@@ -370,17 +370,14 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 	int ret = 0;
 	struct corsair_void_drvdata *drvdata;
 	struct power_supply_config psy_cfg;
-	struct device *dev;
 	char *name;
-
-	dev = &hid_dev->dev;
 
 	if (!hid_is_usb(hid_dev)) {
 		ret = -EINVAL;
 		return ret;
 	}
 
-	drvdata = devm_kzalloc(dev, sizeof(struct corsair_void_drvdata),
+	drvdata = devm_kzalloc(&hid_dev->dev, sizeof(struct corsair_void_drvdata),
 			       GFP_KERNEL);
 	if (!drvdata) {
 		ret = -ENOMEM;
@@ -388,7 +385,14 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 	}
 	hid_set_drvdata(hid_dev, drvdata);
 	psy_cfg.drv_data = drvdata;
-	dev_set_drvdata(dev, drvdata);
+	dev_set_drvdata(&hid_dev->dev, drvdata);
+
+	drvdata->dev = &hid_dev->dev;
+	drvdata->hid_dev = hid_dev;
+
+	//Set initial values for no headset attached
+	//If a headset is attached, it'll send a packet soon enough
+	corsair_void_set_unknown_data(drvdata);
 
 	ret = hid_parse(hid_dev);
 	if (ret) {
@@ -401,10 +405,7 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 		return ret;
 	}
 
-	drvdata->dev = dev;
-	drvdata->hid_dev = hid_dev;
-
-	name = devm_kzalloc(dev, 14, GFP_KERNEL);
+	name = devm_kzalloc(drvdata->dev, 14, GFP_KERNEL);
 	if (!name) {
 		ret = -ENOMEM;
 		goto failed_after_hid_start;
@@ -419,23 +420,19 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 
 	drvdata->mic_up = 0;
 
-	drvdata->batt = devm_power_supply_register(dev, &drvdata->batt_desc, &psy_cfg);
+	drvdata->batt = devm_power_supply_register(drvdata->dev, &drvdata->batt_desc, &psy_cfg);
 	if (IS_ERR(drvdata->batt)) {
 		dev_err(drvdata->dev, "failed to register battery\n");
 		ret = PTR_ERR(drvdata->batt);
 		goto failed_after_hid_start;
 	}
 
-	//Set initial values for no headset attached
-	//If a headset is attached, it'll send a packet soon enough
-	corsair_void_set_unknown_data(drvdata);
-
-	ret = power_supply_powers(drvdata->batt, dev);
+	ret = power_supply_powers(drvdata->batt, drvdata->dev);
 	if (ret) {
 		goto failed_after_hid_start;
 	}
 
-	ret = sysfs_create_group(&dev->kobj, &corsair_void_attr_group);
+	ret = sysfs_create_group(&drvdata->dev->kobj, &corsair_void_attr_group);
 	if (ret) {
 		goto failed_after_hid_start;
 	}
