@@ -369,15 +369,13 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 	char *name;
 
 	if (!hid_is_usb(hid_dev)) {
-		ret = -EINVAL;
-		return ret;
+		return -EINVAL;
 	}
 
 	drvdata = devm_kzalloc(&hid_dev->dev, sizeof(struct corsair_void_drvdata),
 			       GFP_KERNEL);
 	if (!drvdata) {
-		ret = -ENOMEM;
-		return ret;
+		return -ENOMEM;
 	}
 	hid_set_drvdata(hid_dev, drvdata);
 	psy_cfg.drv_data = drvdata;
