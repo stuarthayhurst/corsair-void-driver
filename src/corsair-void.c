@@ -265,9 +265,8 @@ static int corsair_void_battery_get_property(struct power_supply *psy,
 
 query_required:
 	ret = corsair_void_query_receiver(drvdata);
-
 	if (ret) {
-		goto query_failed;
+		return ret;
 	}
 
 	switch (prop) {
@@ -288,7 +287,6 @@ query_required:
 			break;
 	}
 
-query_failed:
 	return ret;
 }
 
@@ -314,8 +312,7 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 	unsigned char* send_buf;
 	int alert_id;
 
-	ret = kstrtoint(buf, 10, &alert_id);
-	if (ret) {
+	if (kstrtoint(buf, 10, &alert_id)) {
 		return -EINVAL;
 	}
 
