@@ -323,8 +323,7 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 
 	send_buf = kmalloc(3, GFP_KERNEL);
 	if (!send_buf) {
-		ret = -ENOMEM;
-		goto failed_alloc;
+		return -ENOMEM;
 	}
 
 	//Packet format to send alert with ID alert_id
@@ -340,13 +339,11 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 
 	if (ret) {
 		dev_warn(dev, "Failed to send alert request (reason %i)", ret);
-		goto failed;
+	} else {
+		ret = count;
 	}
 
-	ret = count;
-failed:
 	kfree(send_buf);
-failed_alloc:
 	return ret;
 }
 
