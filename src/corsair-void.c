@@ -128,6 +128,8 @@ static void corsair_void_set_unknown_data(struct corsair_void_drvdata *drvdata)
 	batt_data->capacity = 0;
 	batt_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
 
+	drvdata->mic_up = 0;
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
 	corsair_void_set_wireless_status(drvdata);
 #endif
@@ -417,8 +419,6 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 	drvdata->batt_desc.properties = corsair_void_battery_props;
 	drvdata->batt_desc.num_properties = ARRAY_SIZE(corsair_void_battery_props);
 	drvdata->batt_desc.get_property = corsair_void_battery_get_property;
-
-	drvdata->mic_up = 0;
 
 	drvdata->batt = devm_power_supply_register(drvdata->dev, &drvdata->batt_desc, &psy_cfg);
 	if (IS_ERR(drvdata->batt)) {
