@@ -17,13 +17,11 @@
   - [x] Battery reporting
   - [ ] LED support (on / off, brightness, colour)
   - [ ] Sidetone support
-  - [x] Alert support
-    - `send_alert: [0 / 1] (write-only)`
   - [ ] Misc device / kernel attributes
     - [x] `(USB) wireless_status` (untested - requires kernel 6.4+)
-    - [ ] `(sysfs) hardware_version`
-    - [ ] `(sysfs) firmware_version`
     - [x] `(sysfs) microphone_up: [0 / 1] (read-only)`
+    - [x] `(sysfs) send_alert: [0 / 1] (write-only)`
+    - [ ] `(sysfs) firmware_version`
 
 ## References:
   - [headsetcontrol](https://github.com/Sapd/HeadsetControl/blob/master/src/devices/corsair_void.c)
