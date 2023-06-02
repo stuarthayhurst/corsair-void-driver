@@ -200,6 +200,7 @@ static int corsair_void_query_receiver(struct corsair_void_drvdata *drvdata)
 	if (!raw_receiver_info->waiting) {
 	  init_completion(&raw_receiver_info->query_completed);
 	}
+	raw_receiver_info->waiting = true;
 
 	ret = usb_control_msg_send(usb_dev, 0,
 			CORSAIR_VOID_CONTROL_REQUEST, CORSAIR_VOID_CONTROL_REQUEST_TYPE,
@@ -218,7 +219,6 @@ static int corsair_void_query_receiver(struct corsair_void_drvdata *drvdata)
 	  - In reality, it takes much less time than this
 	*/
 	expire = msecs_to_jiffies(500);
-	raw_receiver_info->waiting = true;
 	if (!wait_for_completion_timeout(&raw_receiver_info->query_completed, expire)) {
 		ret = -ETIMEDOUT;
 		printk(KERN_WARNING DRIVER_NAME": failed to query receiver data (reason %i)", ret);
@@ -461,6 +461,11 @@ static int corsair_void_raw_event(struct hid_device *hid_dev, struct hid_report 
 
 		corsair_void_process_receiver(drvdata);
 		complete(&drvdata->raw_receiver_info.query_completed);
+
+		//If data wasn't requested, send changed event
+		if (!drvdata->raw_receiver_info.waiting) {
+			power_supply_changed(drvdata->batt);
+		}
 	}
 
 	return 0;
