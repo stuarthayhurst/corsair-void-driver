@@ -86,8 +86,8 @@ struct corsair_void_battery_data {
 };
 
 struct corsair_void_raw_receiver_info {
-	bool waiting;
 	struct completion query_completed;
+	bool requested;
 
 	int battery_capacity;
 	int connection_status;
@@ -196,11 +196,9 @@ static int corsair_void_query_receiver(struct corsair_void_drvdata *drvdata)
 	unsigned char send_buf[2] = {0xC9, 0x64};
 	unsigned long expire = 0;
 
-	//Prepare a completion to wait for return data
-	if (!raw_receiver_info->waiting) {
-	  init_completion(&raw_receiver_info->query_completed);
-	}
-	raw_receiver_info->waiting = true;
+	//Reset the completion to wait for return data HID event
+	reinit_completion(&raw_receiver_info->query_completed);
+	raw_receiver_info->requested = true;
 
 	ret = usb_control_msg_send(usb_dev, 0,
 			CORSAIR_VOID_CONTROL_REQUEST, CORSAIR_VOID_CONTROL_REQUEST_TYPE,
@@ -222,10 +220,10 @@ static int corsair_void_query_receiver(struct corsair_void_drvdata *drvdata)
 	if (!wait_for_completion_timeout(&raw_receiver_info->query_completed, expire)) {
 		ret = -ETIMEDOUT;
 		printk(KERN_WARNING DRIVER_NAME": failed to query receiver data (reason %i)", ret);
-		raw_receiver_info->waiting = false;
+		raw_receiver_info->requested = false;
 		goto unknown_data;
 	}
-	raw_receiver_info->waiting = false;
+	raw_receiver_info->requested = false;
 
 goto success;
 unknown_data:
@@ -384,6 +382,8 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 	drvdata->dev = &hid_dev->dev;
 	drvdata->hid_dev = hid_dev;
 
+	init_completion(&drvdata->raw_receiver_info.query_completed);
+
 	//Set initial values for no headset attached
 	//If a headset is attached, it'll send a packet soon enough
 	corsair_void_set_unknown_data(drvdata);
@@ -463,7 +463,7 @@ static int corsair_void_raw_event(struct hid_device *hid_dev, struct hid_report 
 		complete(&drvdata->raw_receiver_info.query_completed);
 
 		//If data wasn't requested, send changed event
-		if (!drvdata->raw_receiver_info.waiting) {
+		if (!drvdata->raw_receiver_info.requested) {
 			power_supply_changed(drvdata->batt);
 		}
 	}
