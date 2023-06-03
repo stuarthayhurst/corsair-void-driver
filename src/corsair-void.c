@@ -54,6 +54,7 @@ INDEX: PROPERTY
 #include <linux/power_supply.h>
 #include <linux/completion.h>
 
+#include <linux/bitops.h>
 #include <linux/version.h>
 
 #include "hid-ids.h"
@@ -66,7 +67,7 @@ INDEX: PROPERTY
 #define CORSAIR_VOID_CONTROL_ALERT_VALUE 0x02CA
 
 #define CORSAIR_VOID_BATTERY_REPORT_ID 100
-#define CORSAIR_VOID_MIC_UP 128
+#define CORSAIR_VOID_MIC_UP BIT(7)
 
 static enum power_supply_property corsair_void_battery_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
