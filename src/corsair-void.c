@@ -107,6 +107,7 @@ struct corsair_void_drvdata {
 
 	struct power_supply *batt;
 	struct power_supply_desc batt_desc;
+	bool batt_registered;
 };
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
@@ -419,6 +420,7 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 		ret = PTR_ERR(drvdata->batt);
 		goto failed_after_hid_start;
 	}
+	drvdata->batt_registered = true;
 
 	ret = power_supply_powers(drvdata->batt, drvdata->dev);
 	if (ret) {
@@ -446,7 +448,10 @@ static void corsair_void_remove(struct hid_device *hid_dev)
 {
 	struct corsair_void_drvdata *drvdata = hid_get_drvdata(hid_dev);
 
-	power_supply_unregister(drvdata->batt);
+	if (drvdata->batt_registered) {
+		power_supply_unregister(drvdata->batt);
+	}
+
 	sysfs_remove_group(&hid_dev->dev.kobj, &corsair_void_attr_group);
 	hid_hw_stop(hid_dev);
 }
