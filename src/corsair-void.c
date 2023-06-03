@@ -42,7 +42,8 @@ INDEX: PROPERTY
   - 0     : Disconnected
   - 1 / 2 : Normal / low
   - 3     : Unknown (not seen)
-  - 4 / 5 : Charging
+  - 4     : Fully charged
+  - 5     : Charging
 */
 /* ------------------------------------------------------------------------- */
 
@@ -163,6 +164,9 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata) 
 
 			break;
 		case 4:
+			//Battery fully charged
+			battery_data->status = POWER_SUPPLY_STATUS_FULL;
+			break;
 		case 5: //Battery charging
 			battery_data->status = POWER_SUPPLY_STATUS_CHARGING;
 			break;
