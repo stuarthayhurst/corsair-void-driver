@@ -12,6 +12,7 @@
   - A different build directory can be forced with `BUILD_DIR=[DIR] make ...`
     - Defaults to `build`
   - Kernel headers are responsible for the install, look for `/usr/lib/modules/[KERNEL VERSION]/extra/corsair-void.ko` to remove it
+    - On some systems, this might be `/usr/lib/modules/[KERNEL VERSION]/updates/corsair-void.ko`
 
 ## Features
   - [x] Battery reporting
