@@ -462,11 +462,6 @@ static int corsair_void_raw_event(struct hid_device *hid_dev, struct hid_report 
 
 		corsair_void_process_receiver(drvdata);
 		complete(&drvdata->raw_receiver_info.query_completed);
-
-		//If data wasn't requested, send changed event
-		if (!drvdata->raw_receiver_info.requested) {
-			power_supply_changed(drvdata->batt);
-		}
 	}
 
 	return 0;
