@@ -107,7 +107,6 @@ struct corsair_void_drvdata {
 
 	struct power_supply *battery;
 	struct power_supply_desc battery_desc;
-	bool battery_registered;
 };
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
@@ -417,13 +416,12 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 	drvdata->battery_desc.num_properties = ARRAY_SIZE(corsair_void_battery_props);
 	drvdata->battery_desc.get_property = corsair_void_battery_get_property;
 
-	drvdata->battery = power_supply_register(drvdata->dev, &drvdata->battery_desc, &psy_cfg);
+	drvdata->battery = devm_power_supply_register(drvdata->dev, &drvdata->battery_desc, &psy_cfg);
 	if (IS_ERR(drvdata->battery)) {
 		dev_err(drvdata->dev, "failed to register battery\n");
 		ret = PTR_ERR(drvdata->battery);
 		goto failed_after_hid_start;
 	}
-	drvdata->battery_registered = true;
 
 	ret = power_supply_powers(drvdata->battery, drvdata->dev);
 	if (ret) {
@@ -449,12 +447,6 @@ success:
 
 static void corsair_void_remove(struct hid_device *hid_dev)
 {
-	struct corsair_void_drvdata *drvdata = hid_get_drvdata(hid_dev);
-
-	if (drvdata->battery_registered) {
-		power_supply_unregister(drvdata->battery);
-	}
-
 	sysfs_remove_group(&hid_dev->dev.kobj, &corsair_void_attr_group);
 	hid_hw_stop(hid_dev);
 }
