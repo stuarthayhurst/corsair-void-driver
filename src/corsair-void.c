@@ -214,7 +214,7 @@ static int corsair_void_query_receiver(struct corsair_void_drvdata *drvdata)
 
 	/*
 	  - Wait 500ms for all receiver data to arrive
-	  - Data is reported as a hid event, so we wait for the timeout, or all data to arrive
+	  - Data is reported as a hid event, so we wait for the event until timeout
 	  - In reality, it takes much less time than this
 	*/
 	expire = msecs_to_jiffies(500);
