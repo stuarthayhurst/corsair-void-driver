@@ -105,9 +105,9 @@ struct corsair_void_drvdata {
 	struct corsair_void_battery_data battery_data;
 	int mic_up;
 
-	struct power_supply *batt;
-	struct power_supply_desc batt_desc;
-	bool batt_registered;
+	struct power_supply *battery;
+	struct power_supply_desc battery_desc;
+	bool battery_registered;
 };
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
@@ -115,7 +115,7 @@ static void corsair_void_set_wireless_status(struct corsair_void_drvdata *drvdat
 {
 	struct usb_interface *usb_if = to_usb_interface(drvdata->dev->parent);
 
-	usb_set_wireless_status(usb_if, drvdata->batt_data->present ?
+	usb_set_wireless_status(usb_if, drvdata->battery_data->present ?
 					USB_WIRELESS_STATUS_CONNECTED :
 					USB_WIRELESS_STATUS_DISCONNECTED);
 }
@@ -123,12 +123,12 @@ static void corsair_void_set_wireless_status(struct corsair_void_drvdata *drvdat
 
 static void corsair_void_set_unknown_data(struct corsair_void_drvdata *drvdata)
 {
-	struct corsair_void_battery_data *batt_data = &drvdata->battery_data;
+	struct corsair_void_battery_data *battery_data = &drvdata->battery_data;
 
-	batt_data->status = POWER_SUPPLY_STATUS_UNKNOWN;
-	batt_data->present = 0;
-	batt_data->capacity = 0;
-	batt_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
+	battery_data->status = POWER_SUPPLY_STATUS_UNKNOWN;
+	battery_data->present = 0;
+	battery_data->capacity = 0;
+	battery_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
 
 	drvdata->mic_up = 0;
 
@@ -139,7 +139,7 @@ static void corsair_void_set_unknown_data(struct corsair_void_drvdata *drvdata)
 
 static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata) {
 	struct corsair_void_raw_receiver_info *raw_receiver_info = &drvdata->raw_receiver_info;
-	struct corsair_void_battery_data *batt_data = &drvdata->battery_data;
+	struct corsair_void_battery_data *battery_data = &drvdata->battery_data;
 
 	//Check connection and battery status to set battery data
 	if (raw_receiver_info->connection_status != 177) {
@@ -150,29 +150,29 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata) 
 		goto unknown_data;
 	} else {
 		//Battery connected
-		batt_data->present = 1;
-		batt_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_NORMAL;
+		battery_data->present = 1;
+		battery_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_NORMAL;
 
 		//Set battery status
 		switch (raw_receiver_info->battery_status) {
 		case 1:
 		case 2: //Battery normal / low
-			batt_data->status = POWER_SUPPLY_STATUS_DISCHARGING;
+			battery_data->status = POWER_SUPPLY_STATUS_DISCHARGING;
 			if (raw_receiver_info->battery_status == 2) {
-				batt_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_LOW;
+				battery_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_LOW;
 			}
 
 			break;
 		case 4:
 		case 5: //Battery charging
-			batt_data->status = POWER_SUPPLY_STATUS_CHARGING;
+			battery_data->status = POWER_SUPPLY_STATUS_CHARGING;
 			break;
 		default:
 			goto unknown_data;
 			break;
 		}
 
-		batt_data->capacity = raw_receiver_info->battery_capacity;
+		battery_data->capacity = raw_receiver_info->battery_capacity;
 	}
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
@@ -408,21 +408,21 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 	}
 	sprintf(name, "hid-%02d-battery", hid_dev->id);
 
-	drvdata->batt_desc.name = name;
-	drvdata->batt_desc.type = POWER_SUPPLY_TYPE_BATTERY;
-	drvdata->batt_desc.properties = corsair_void_battery_props;
-	drvdata->batt_desc.num_properties = ARRAY_SIZE(corsair_void_battery_props);
-	drvdata->batt_desc.get_property = corsair_void_battery_get_property;
+	drvdata->battery_desc.name = name;
+	drvdata->battery_desc.type = POWER_SUPPLY_TYPE_BATTERY;
+	drvdata->battery_desc.properties = corsair_void_battery_props;
+	drvdata->battery_desc.num_properties = ARRAY_SIZE(corsair_void_battery_props);
+	drvdata->battery_desc.get_property = corsair_void_battery_get_property;
 
-	drvdata->batt = power_supply_register(drvdata->dev, &drvdata->batt_desc, &psy_cfg);
-	if (IS_ERR(drvdata->batt)) {
+	drvdata->battery = power_supply_register(drvdata->dev, &drvdata->battery_desc, &psy_cfg);
+	if (IS_ERR(drvdata->battery)) {
 		dev_err(drvdata->dev, "failed to register battery\n");
-		ret = PTR_ERR(drvdata->batt);
+		ret = PTR_ERR(drvdata->battery);
 		goto failed_after_hid_start;
 	}
-	drvdata->batt_registered = true;
+	drvdata->battery_registered = true;
 
-	ret = power_supply_powers(drvdata->batt, drvdata->dev);
+	ret = power_supply_powers(drvdata->battery, drvdata->dev);
 	if (ret) {
 		goto failed_after_hid_start;
 	}
@@ -448,8 +448,8 @@ static void corsair_void_remove(struct hid_device *hid_dev)
 {
 	struct corsair_void_drvdata *drvdata = hid_get_drvdata(hid_dev);
 
-	if (drvdata->batt_registered) {
-		power_supply_unregister(drvdata->batt);
+	if (drvdata->battery_registered) {
+		power_supply_unregister(drvdata->battery);
 	}
 
 	sysfs_remove_group(&hid_dev->dev.kobj, &corsair_void_attr_group);
