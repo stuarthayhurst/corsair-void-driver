@@ -413,7 +413,7 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 	drvdata->batt_desc.num_properties = ARRAY_SIZE(corsair_void_battery_props);
 	drvdata->batt_desc.get_property = corsair_void_battery_get_property;
 
-	drvdata->batt = devm_power_supply_register(drvdata->dev, &drvdata->batt_desc, &psy_cfg);
+	drvdata->batt = power_supply_register(drvdata->dev, &drvdata->batt_desc, &psy_cfg);
 	if (IS_ERR(drvdata->batt)) {
 		dev_err(drvdata->dev, "failed to register battery\n");
 		ret = PTR_ERR(drvdata->batt);
@@ -444,6 +444,9 @@ success:
 
 static void corsair_void_remove(struct hid_device *hid_dev)
 {
+	struct corsair_void_drvdata *drvdata = hid_get_drvdata(hid_dev);
+
+	power_supply_unregister(drvdata->batt);
 	sysfs_remove_group(&hid_dev->dev.kobj, &corsair_void_attr_group);
 	hid_hw_stop(hid_dev);
 }
