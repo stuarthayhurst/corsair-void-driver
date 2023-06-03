@@ -367,6 +367,7 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 	struct corsair_void_drvdata *drvdata;
 	struct power_supply_config psy_cfg;
 	char *name;
+	int name_length;
 
 	if (!hid_is_usb(hid_dev)) {
 		return -EINVAL;
@@ -401,12 +402,13 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 		return ret;
 	}
 
+	name_length = snprintf(NULL, 0, "hid-%d-battery", hid_dev->id);
 	name = devm_kzalloc(drvdata->dev, 14, GFP_KERNEL);
 	if (!name) {
 		ret = -ENOMEM;
 		goto failed_after_hid_start;
 	}
-	sprintf(name, "hid-%02d-battery", hid_dev->id);
+	snprintf(name, name_length + 1, "hid-%d-battery", hid_dev->id);
 
 	drvdata->battery_desc.name = name;
 	drvdata->battery_desc.type = POWER_SUPPLY_TYPE_BATTERY;
