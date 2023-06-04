@@ -89,7 +89,6 @@ struct corsair_void_battery_data {
 
 struct corsair_void_raw_receiver_info {
 	struct completion query_completed;
-	bool requested;
 
 	int battery_capacity;
 	int connection_status;
@@ -204,7 +203,6 @@ static int corsair_void_query_receiver(struct corsair_void_drvdata *drvdata)
 
 	//Reset the completion to wait for return data HID event
 	reinit_completion(&raw_receiver_info->query_completed);
-	raw_receiver_info->requested = true;
 
 	ret = usb_control_msg_send(usb_dev, 0,
 			CORSAIR_VOID_CONTROL_REQUEST, CORSAIR_VOID_CONTROL_REQUEST_TYPE,
@@ -226,10 +224,8 @@ static int corsair_void_query_receiver(struct corsair_void_drvdata *drvdata)
 	if (!wait_for_completion_timeout(&raw_receiver_info->query_completed, expire)) {
 		ret = -ETIMEDOUT;
 		printk(KERN_WARNING DRIVER_NAME": failed to query receiver data (reason %i)", ret);
-		raw_receiver_info->requested = false;
 		goto unknown_data;
 	}
-	raw_receiver_info->requested = false;
 
 goto success;
 unknown_data:
