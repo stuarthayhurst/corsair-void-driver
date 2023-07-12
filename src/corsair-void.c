@@ -139,6 +139,11 @@ static void corsair_void_set_unknown_data(struct corsair_void_drvdata *drvdata)
 static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata) {
 	struct corsair_void_raw_receiver_info *raw_receiver_info = &drvdata->raw_receiver_info;
 	struct corsair_void_battery_data *battery_data = &drvdata->battery_data;
+	struct corsair_void_battery_data orig_battery_data;
+	int battery_struct_size = sizeof(struct corsair_void_battery_data);
+
+	//Save initial battery data, to compare later
+	orig_battery_data = *battery_data;
 
 	//Check connection and battery status to set battery data
 	if (raw_receiver_info->connection_status != 177) {
@@ -186,6 +191,12 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata) 
 unknown_data:
 	corsair_void_set_unknown_data(drvdata);
 success:
+
+	//Decide if battery values changed
+	if (memcmp(&orig_battery_data, battery_data, battery_struct_size)) {
+		power_supply_changed(drvdata->battery);
+	}
+
 	return;
 }
 
