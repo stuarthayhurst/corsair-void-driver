@@ -105,6 +105,10 @@ struct corsair_void_drvdata {
 	struct power_supply_desc battery_desc;
 };
 
+/*
+ - Functions to process receiver data
+*/
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
 static void corsair_void_set_wireless_status(struct corsair_void_drvdata *drvdata)
 {
@@ -185,6 +189,10 @@ success:
 	return;
 }
 
+/*
+ - Functions to report stored data
+*/
+
 static int corsair_void_battery_get_property(struct power_supply *psy,
 					     enum power_supply_property prop,
 					     union power_supply_propval *val)
@@ -236,6 +244,10 @@ static ssize_t corsair_void_report_mic_up(struct device *dev,
 	return sysfs_emit(buf, "%i\n", drvdata->mic_up);
 }
 
+/*
+ - Functions to send data to headset
+*/
+
 static ssize_t corsair_void_send_alert(struct device *dev,
 				       struct device_attribute *attr,
 				       const char *buf, size_t count)
@@ -282,6 +294,10 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 	kfree(send_buf);
 	return ret;
 }
+
+/*
+ - Driver setup, probing and HID event handling
+*/
 
 static DEVICE_ATTR(microphone_up, 0444, corsair_void_report_mic_up, NULL);
 //Write-only alert, as it only plays a sound (nothing to report back)
