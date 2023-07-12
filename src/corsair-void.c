@@ -53,7 +53,6 @@ INDEX: PROPERTY
 #include <linux/module.h>
 #include <linux/usb.h>
 #include <linux/power_supply.h>
-#include <linux/completion.h>
 
 #include <linux/bitops.h>
 #include <linux/version.h>
@@ -64,7 +63,6 @@ INDEX: PROPERTY
 #define CORSAIR_VOID_CONTROL_REQUEST_TYPE 0x21
 #define CORSAIR_VOID_CONTROL_INDEX 3
 
-#define CORSAIR_VOID_CONTROL_BATT_VALUE 0x02C9
 #define CORSAIR_VOID_CONTROL_ALERT_VALUE 0x02CA
 
 #define CORSAIR_VOID_BATTERY_REPORT_ID 100
@@ -88,8 +86,6 @@ struct corsair_void_battery_data {
 };
 
 struct corsair_void_raw_receiver_info {
-	struct completion query_completed;
-
 	int battery_capacity;
 	int connection_status;
 	int battery_status;
@@ -189,51 +185,6 @@ success:
 	return;
 }
 
-static int corsair_void_query_receiver(struct corsair_void_drvdata *drvdata)
-{
-	int ret = 0;
-
-	struct usb_interface *usb_if = to_usb_interface(drvdata->dev->parent);
-	struct usb_device *usb_dev = interface_to_usbdev(usb_if);
-
-	struct corsair_void_raw_receiver_info *raw_receiver_info = &drvdata->raw_receiver_info;
-
-	unsigned char send_buf[2] = {0xC9, 0x64};
-	unsigned long expire = 0;
-
-	//Reset the completion to wait for return data HID event
-	reinit_completion(&raw_receiver_info->query_completed);
-
-	ret = usb_control_msg_send(usb_dev, 0,
-			CORSAIR_VOID_CONTROL_REQUEST, CORSAIR_VOID_CONTROL_REQUEST_TYPE,
-			CORSAIR_VOID_CONTROL_BATT_VALUE, CORSAIR_VOID_CONTROL_INDEX,
-			send_buf, 2,
-			USB_CTRL_SET_TIMEOUT, GFP_KERNEL);
-
-	if (ret) {
-		printk(KERN_WARNING DRIVER_NAME": failed to query receiver data (reason %i)", ret);
-		goto unknown_data;
-	}
-
-	/*
-	  - Wait 500ms for all receiver data to arrive
-	  - Data is reported as a hid event, so we wait for the event until timeout
-	  - In reality, it takes much less time than this
-	*/
-	expire = msecs_to_jiffies(500);
-	if (!wait_for_completion_timeout(&raw_receiver_info->query_completed, expire)) {
-		ret = -ETIMEDOUT;
-		printk(KERN_WARNING DRIVER_NAME": failed to query receiver data (reason %i)", ret);
-		goto unknown_data;
-	}
-
-goto success;
-unknown_data:
-	corsair_void_set_unknown_data(drvdata);
-success:
-	return ret;
-}
-
 static int corsair_void_battery_get_property(struct power_supply *psy,
 					     enum power_supply_property prop,
 					     union power_supply_propval *val)
@@ -241,7 +192,6 @@ static int corsair_void_battery_get_property(struct power_supply *psy,
 	struct corsair_void_drvdata *drvdata = power_supply_get_drvdata(psy);
 	int ret = 0;
 
-	//Handle any properties that don't require a query
 	switch (prop) {
 		case POWER_SUPPLY_PROP_SCOPE:
 			val->intval = POWER_SUPPLY_SCOPE_DEVICE;
@@ -256,20 +206,6 @@ static int corsair_void_battery_get_property(struct power_supply *psy,
 		case POWER_SUPPLY_PROP_MANUFACTURER:
 			val->strval = "Corsair";
 			break;
-		default:
-			goto query_required;
-			break;
-	}
-
-	return ret;
-
-query_required:
-	ret = corsair_void_query_receiver(drvdata);
-	if (ret) {
-		return ret;
-	}
-
-	switch (prop) {
 		case POWER_SUPPLY_PROP_STATUS:
 			val->intval = drvdata->battery_data.status;
 			break;
@@ -385,8 +321,6 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 	drvdata->dev = &hid_dev->dev;
 	drvdata->hid_dev = hid_dev;
 
-	init_completion(&drvdata->raw_receiver_info.query_completed);
-
 	//Set initial values for no headset attached
 	//If a headset is attached, it'll send a packet soon enough
 	corsair_void_set_unknown_data(drvdata);
@@ -464,7 +398,6 @@ static int corsair_void_raw_event(struct hid_device *hid_dev, struct hid_report 
 		drvdata->mic_up = (data[2] & CORSAIR_VOID_MIC_UP) ? 1 : 0;
 
 		corsair_void_process_receiver(drvdata);
-		complete(&drvdata->raw_receiver_info.query_completed);
 	}
 
 	return 0;
