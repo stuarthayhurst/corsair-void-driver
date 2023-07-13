@@ -11,9 +11,9 @@
 /* ------------------------------------------------------------------------- */
 /*
  - When queried, the receiver reponds with 5 bytes to describe the battery
-  - The power button, mute button and move the mic alsp trigger this report
- - This includes connection + battery status, capacity, mic + power button status
- - The information below may not be perfect, as it's been gathered throug guesses
+  - The power button, mute button and moving the mic also trigger this report
+ - This includes power button + mic + connection + battery status and capacity
+ - The information below may not be perfect, it's been gathered through guesses
 
 INDEX: PROPERTY
  0: REPORT ID
@@ -289,8 +289,10 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 	send_buf[2] = alert_id;
 
 	ret = usb_control_msg_send(usb_dev, 0,
-			CORSAIR_VOID_CONTROL_REQUEST, CORSAIR_VOID_CONTROL_REQUEST_TYPE,
-			CORSAIR_VOID_CONTROL_ALERT_VALUE, CORSAIR_VOID_CONTROL_INDEX,
+			CORSAIR_VOID_CONTROL_REQUEST,
+			CORSAIR_VOID_CONTROL_REQUEST_TYPE,
+			CORSAIR_VOID_CONTROL_ALERT_VALUE,
+			CORSAIR_VOID_CONTROL_INDEX,
 			send_buf, 3,
 			USB_CTRL_SET_TIMEOUT, GFP_KERNEL);
 
@@ -322,7 +324,8 @@ static const struct attribute_group corsair_void_attr_group = {
 	.attrs = corsair_void_attrs,
 };
 
-static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_device_id *hid_id)
+static int corsair_void_probe(struct hid_device *hid_dev,
+			      const struct hid_device_id *hid_id)
 {
 	int ret = 0;
 	struct corsair_void_drvdata *drvdata;
@@ -375,7 +378,9 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 	drvdata->battery_desc.num_properties = ARRAY_SIZE(corsair_void_battery_props);
 	drvdata->battery_desc.get_property = corsair_void_battery_get_property;
 
-	drvdata->battery = devm_power_supply_register(drvdata->dev, &drvdata->battery_desc, &psy_cfg);
+	drvdata->battery = devm_power_supply_register(drvdata->dev,
+						      &drvdata->battery_desc,
+						      &psy_cfg);
 	if (IS_ERR(drvdata->battery)) {
 		hid_err(hid_dev, "failed to register battery\n");
 		ret = PTR_ERR(drvdata->battery);
@@ -410,7 +415,9 @@ static void corsair_void_remove(struct hid_device *hid_dev)
 	hid_hw_stop(hid_dev);
 }
 
-static int corsair_void_raw_event(struct hid_device *hid_dev, struct hid_report *hid_report, u8* data, int size)
+static int corsair_void_raw_event(struct hid_device *hid_dev,
+				  struct hid_report *hid_report,
+				  u8* data, int size)
 {
 	struct corsair_void_drvdata *drvdata = hid_get_drvdata(hid_dev);
 
