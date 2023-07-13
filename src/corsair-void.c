@@ -175,7 +175,7 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata) 
 			battery_data->status = POWER_SUPPLY_STATUS_CHARGING;
 			break;
 		default:
-			printk(KERN_WARNING DRIVER_NAME": unknown receiver status '%i'", battery_data->status);
+			dev_warn(drvdata->dev, "unknown receiver status '%i'", battery_data->status);
 			goto unknown_data;
 			break;
 		}
@@ -379,7 +379,7 @@ static int corsair_void_probe(struct hid_device *hid_dev, const struct hid_devic
 
 	drvdata->battery = devm_power_supply_register(drvdata->dev, &drvdata->battery_desc, &psy_cfg);
 	if (IS_ERR(drvdata->battery)) {
-		dev_err(drvdata->dev, "failed to register battery\n");
+		hid_err(hid_dev, "failed to register battery\n");
 		ret = PTR_ERR(drvdata->battery);
 		goto failed_after_hid_start;
 	}
