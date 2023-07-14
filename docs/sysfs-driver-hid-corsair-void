@@ -1,0 +1,13 @@
+What:		/sys/bus/hid/drivers/corsair-void/<dev>/microphone_up
+Date:		July 2023
+KernelVersion:	T.B.C
+Contact:	Stuart Hayhurst <stuart.a.hayhurst@gmail.com>
+Description:	(R) Get the physical position of the microphone
+			* 1 -> Microphone up
+			* 0 -> Microphone down
+
+What:		/sys/bus/hid/drivers/corsair-void/<dev>/send_alert
+Date:		July 2023
+KernelVersion:	T.B.C
+Contact:	Stuart Hayhurst <stuart.a.hayhurst@gmail.com>
+Description:	(W) Play a built-in notification from the headset (0 / 1)
