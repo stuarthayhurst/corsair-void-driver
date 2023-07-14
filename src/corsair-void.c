@@ -159,15 +159,17 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata) 
 		//Set battery status
 		switch (raw_receiver_info->battery_status) {
 		case 1:
-		case 2: //Battery normal / low
+		case 2:
+		case 3: //Battery normal / low / critical
 			battery_data->status = POWER_SUPPLY_STATUS_DISCHARGING;
 			if (raw_receiver_info->battery_status == 2) {
 				battery_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_LOW;
+			} else if (raw_receiver_info->battery_status == 3) {
+				battery_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_CRITICAL;
 			}
 
 			break;
-		case 4:
-			//Battery fully charged
+		case 4: //Battery fully charged
 			battery_data->status = POWER_SUPPLY_STATUS_FULL;
 			break;
 		case 5: //Battery charging
