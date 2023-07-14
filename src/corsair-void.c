@@ -378,7 +378,7 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 	drvdata->battery_desc.num_properties = ARRAY_SIZE(corsair_void_battery_props);
 	drvdata->battery_desc.get_property = corsair_void_battery_get_property;
 
-	drvdata->battery = devm_power_supply_register(drvdata->dev,
+	drvdata->battery = devm_power_supply_register(&hid_dev->dev,
 						      &drvdata->battery_desc,
 						      &psy_cfg);
 	if (IS_ERR(drvdata->battery)) {
@@ -393,7 +393,7 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 		goto failed_after_hid_start;
 	}
 
-	ret = sysfs_create_group(&drvdata->dev->kobj, &corsair_void_attr_group);
+	ret = sysfs_create_group(&hid_dev->dev.kobj, &corsair_void_attr_group);
 	if (ret) {
 		goto failed_after_hid_start;
 	}
