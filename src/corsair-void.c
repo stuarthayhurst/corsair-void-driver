@@ -41,7 +41,7 @@ INDEX: PROPERTY
  4: BATTERY STATUS
   - 0     : Disconnected
   - 1 / 2 : Normal / low
-  - 3     : Unknown (not seen)
+  - 3     : Dead - sent during shutdown
   - 4     : Fully charged
   - 5     : Charging
 */
