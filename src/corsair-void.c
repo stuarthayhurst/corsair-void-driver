@@ -297,7 +297,7 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 			USB_CTRL_SET_TIMEOUT, GFP_KERNEL);
 
 	if (ret) {
-		dev_warn(dev, "Failed to send alert request (reason %i)", ret);
+		dev_warn(dev, "failed to send alert request (reason %i)", ret);
 	} else {
 		ret = count;
 	}
@@ -355,12 +355,12 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 
 	ret = hid_parse(hid_dev);
 	if (ret) {
-		hid_err(hid_dev, "parse failed\n");
+		hid_err(hid_dev, "parse failed (reason: %i)\n", ret);
 		return ret;
 	}
 	ret = hid_hw_start(hid_dev, HID_CONNECT_DEFAULT);
 	if (ret) {
-		hid_err(hid_dev, "hw start failed\n");
+		hid_err(hid_dev, "hid_hw_start failed (reason: %i)\n", ret);
 		return ret;
 	}
 
@@ -382,8 +382,9 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 						      &drvdata->battery_desc,
 						      &psy_cfg);
 	if (IS_ERR(drvdata->battery)) {
-		hid_err(hid_dev, "failed to register battery\n");
 		ret = PTR_ERR(drvdata->battery);
+		hid_err(hid_dev, "failed to register battery '%s' (reason: %i)\n",
+			name, ret);
 		goto failed_after_hid_start;
 	}
 
