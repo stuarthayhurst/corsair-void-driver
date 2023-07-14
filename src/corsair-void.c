@@ -39,11 +39,12 @@ INDEX: PROPERTY
   - 177: Normal
 
  4: BATTERY STATUS
-  - 0     : Disconnected
-  - 1 / 2 : Normal / low
-  - 3     : Dead - sent during shutdown
-  - 4     : Fully charged
-  - 5     : Charging
+  - 0: Disconnected
+  - 1: Normal
+  - 2: Low
+  - 3: Critical - sent during shutdown
+  - 4: Fully charged
+  - 5: Charging
 */
 /* ------------------------------------------------------------------------- */
 
