@@ -113,7 +113,7 @@ static void corsair_void_set_wireless_status(struct corsair_void_drvdata *drvdat
 {
 	struct usb_interface *usb_if = to_usb_interface(drvdata->dev->parent);
 
-	usb_set_wireless_status(usb_if, drvdata->battery_data->present ?
+	usb_set_wireless_status(usb_if, drvdata->battery_data.present ?
 					USB_WIRELESS_STATUS_CONNECTED :
 					USB_WIRELESS_STATUS_DISCONNECTED);
 }
