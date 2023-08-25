@@ -48,12 +48,13 @@ INDEX: PROPERTY
 */
 /* ------------------------------------------------------------------------- */
 
+#include <linux/bitops.h>
 #include <linux/hid.h>
 #include <linux/module.h>
-#include <linux/usb.h>
 #include <linux/power_supply.h>
+#include <linux/usb.h>
 
-#include <linux/bitops.h>
+//Only required for pre-Linux 6.4 support
 #include <linux/version.h>
 
 #include "hid-ids.h"
