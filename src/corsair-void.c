@@ -54,7 +54,7 @@ INDEX: PROPERTY
 #include <linux/power_supply.h>
 #include <linux/usb.h>
 
-//Only required for pre-Linux 6.4 support
+/* Only required for pre-Linux 6.4 support */
 #include <linux/version.h>
 
 #include "hid-ids.h"
@@ -142,26 +142,26 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata) 
 	struct corsair_void_battery_data orig_battery_data;
 	int battery_struct_size = sizeof(struct corsair_void_battery_data);
 
-	//Save initial battery data, to compare later
+	/* Save initial battery data, to compare later */
 	orig_battery_data = *battery_data;
 
-	//Check connection and battery status to set battery data
+	/* Check connection and battery status to set battery data */
 	if (raw_receiver_info->connection_status != 177) {
-		//Headset not connected
+		/* Headset not connected */
 		goto unknown_data;
 	} else if (raw_receiver_info->battery_status == 0) {
-		//Battery information unavailable
+		/* Battery information unavailable */
 		goto unknown_data;
 	} else {
-		//Battery connected
+		/* Battery connected */
 		battery_data->present = 1;
 		battery_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_NORMAL;
 
-		//Set battery status
+		/* Set battery status */
 		switch (raw_receiver_info->battery_status) {
 		case 1:
 		case 2:
-		case 3: //Battery normal / low / critical
+		case 3: /* Battery normal / low / critical */
 			battery_data->status = POWER_SUPPLY_STATUS_DISCHARGING;
 			if (raw_receiver_info->battery_status == 2) {
 				battery_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_LOW;
@@ -170,10 +170,10 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata) 
 			}
 
 			break;
-		case 4: //Battery fully charged
+		case 4: /* Battery fully charged */
 			battery_data->status = POWER_SUPPLY_STATUS_FULL;
 			break;
-		case 5: //Battery charging
+		case 5: /* Battery charging */
 			battery_data->status = POWER_SUPPLY_STATUS_CHARGING;
 			break;
 		default:
@@ -195,7 +195,7 @@ unknown_data:
 	corsair_void_set_unknown_data(drvdata);
 success:
 
-	//Decide if battery values changed
+	/* Decide if battery values changed */
 	if (memcmp(&orig_battery_data, battery_data, battery_struct_size)) {
 		power_supply_changed(drvdata->battery);
 	}
@@ -278,7 +278,7 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 		return -EINVAL;
 	}
 
-	//Only accept 0 or 1 for alert ID
+	/* Only accept 0 or 1 for alert ID */
 	if (alert_id != 0 && alert_id != 1) {
 		return -EINVAL;
 	}
@@ -288,7 +288,7 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 		return -ENOMEM;
 	}
 
-	//Packet format to send alert with ID alert_id
+	/* Packet format to send alert with ID alert_id */
 	send_buf[0] = 0xCA;
 	send_buf[1] = 0x02;
 	send_buf[2] = alert_id;
@@ -316,7 +316,7 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 */
 
 static DEVICE_ATTR(microphone_up, 0444, corsair_void_report_mic_up, NULL);
-//Write-only alert, as it only plays a sound (nothing to report back)
+/* Write-only alert, as it only plays a sound (nothing to report back) */
 static DEVICE_ATTR(send_alert, 0200, NULL, corsair_void_send_alert);
 
 static struct attribute *corsair_void_attrs[] = {
@@ -354,8 +354,8 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 	drvdata->dev = &hid_dev->dev;
 	drvdata->hid_dev = hid_dev;
 
-	//Set initial values for no headset attached
-	//If a headset is attached, it'll send a packet soon enough
+	/* Set initial values for no headset attached */
+	/* If a headset is attached, it'll send a packet soon enough */
 	corsair_void_set_unknown_data(drvdata);
 
 	ret = hid_parse(hid_dev);
@@ -403,12 +403,12 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 		goto failed_after_hid_start;
 	}
 
-	//Any failures after here should go to failed_after_sysfs
+	/* Any failures after here should go to failed_after_sysfs */
 
 	goto success;
 
-//failed_after_sysfs:
-//	sysfs_remove_group(&hid_dev->dev.kobj, &corsair_void_attr_group);
+/*failed_after_sysfs:
+	sysfs_remove_group(&hid_dev->dev.kobj, &corsair_void_attr_group);*/
 failed_after_hid_start:
 	hid_hw_stop(hid_dev);
 success:
@@ -428,7 +428,7 @@ static int corsair_void_raw_event(struct hid_device *hid_dev,
 	struct corsair_void_drvdata *drvdata = hid_get_drvdata(hid_dev);
 
 	if (hid_report->id == CORSAIR_VOID_BATTERY_REPORT_ID) {
-		//Description of packet is documented at the top of this file
+		/* Description of packet is documented at the top of this file */
 		drvdata->raw_receiver_info.battery_capacity = data[2] & ~CORSAIR_VOID_MIC_UP;
 		drvdata->raw_receiver_info.connection_status = data[3];
 		drvdata->raw_receiver_info.battery_status = data[4];
