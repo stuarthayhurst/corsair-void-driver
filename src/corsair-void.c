@@ -48,6 +48,7 @@ INDEX: PROPERTY
 */
 /* ------------------------------------------------------------------------- */
 
+#include <linux/bitfield.h>
 #include <linux/bitops.h>
 #include <linux/hid.h>
 #include <linux/module.h>
@@ -66,7 +67,9 @@ INDEX: PROPERTY
 #define CORSAIR_VOID_CONTROL_ALERT_VALUE 0x02CA
 
 #define CORSAIR_VOID_BATTERY_REPORT_ID 100
-#define CORSAIR_VOID_MIC_UP BIT(7)
+
+#define CORSAIR_VOID_MIC_MASK GENMASK(7, 7)
+#define CORSAIR_VOID_CAPACITY_MASK GENMASK(6, 0)
 
 static enum power_supply_property corsair_void_battery_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
@@ -429,11 +432,12 @@ static int corsair_void_raw_event(struct hid_device *hid_dev,
 
 	if (hid_report->id == CORSAIR_VOID_BATTERY_REPORT_ID) {
 		/* Description of packet is documented at the top of this file */
-		drvdata->raw_receiver_info.battery_capacity = data[2] & ~CORSAIR_VOID_MIC_UP;
+		drvdata->raw_receiver_info.battery_capacity =
+			FIELD_GET(CORSAIR_VOID_CAPACITY_MASK, data[2]);
 		drvdata->raw_receiver_info.connection_status = data[3];
 		drvdata->raw_receiver_info.battery_status = data[4];
 
-		drvdata->mic_up = (data[2] & CORSAIR_VOID_MIC_UP) ? 1 : 0;
+		drvdata->mic_up = FIELD_GET(CORSAIR_VOID_MIC_MASK, data[2]);
 
 		corsair_void_process_receiver(drvdata);
 	}
