@@ -275,14 +275,14 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 	struct usb_device *usb_dev = interface_to_usbdev(usb_if);
 
 	unsigned char* send_buf;
-	int alert_id;
+	unsigned char alert_id;
 
-	if (kstrtoint(buf, 10, &alert_id)) {
+	if (kstrtou8(buf, 10, &alert_id)) {
 		return -EINVAL;
 	}
 
 	/* Only accept 0 or 1 for alert ID */
-	if (alert_id != 0 && alert_id != 1) {
+	if (alert_id >= 2) {
 		return -EINVAL;
 	}
 
