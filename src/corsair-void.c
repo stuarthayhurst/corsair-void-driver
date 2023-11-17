@@ -180,7 +180,7 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata) 
 			battery_data->status = POWER_SUPPLY_STATUS_CHARGING;
 			break;
 		default:
-			dev_warn(drvdata->dev, "unknown receiver status '%i'",
+			dev_warn(drvdata->dev, "unknown receiver status '%d'",
 				 raw_receiver_info->battery_status);
 			goto unknown_data;
 			break;
@@ -258,7 +258,7 @@ static ssize_t corsair_void_report_mic_up(struct device *dev,
 
 	struct corsair_void_drvdata* drvdata = dev_get_drvdata(dev);
 
-	return sysfs_emit(buf, "%i\n", drvdata->mic_up);
+	return sysfs_emit(buf, "%d\n", drvdata->mic_up);
 }
 
 /*
@@ -305,7 +305,7 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 			USB_CTRL_SET_TIMEOUT, GFP_KERNEL);
 
 	if (ret) {
-		dev_warn(dev, "failed to send alert request (reason %i)", ret);
+		dev_warn(dev, "failed to send alert request (reason %d)", ret);
 	} else {
 		ret = count;
 	}
@@ -363,12 +363,12 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 
 	ret = hid_parse(hid_dev);
 	if (ret) {
-		hid_err(hid_dev, "parse failed (reason: %i)\n", ret);
+		hid_err(hid_dev, "parse failed (reason: %d)\n", ret);
 		return ret;
 	}
 	ret = hid_hw_start(hid_dev, HID_CONNECT_DEFAULT);
 	if (ret) {
-		hid_err(hid_dev, "hid_hw_start failed (reason: %i)\n", ret);
+		hid_err(hid_dev, "hid_hw_start failed (reason: %d)\n", ret);
 		return ret;
 	}
 
@@ -391,7 +391,7 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 						      &psy_cfg);
 	if (IS_ERR(drvdata->battery)) {
 		ret = PTR_ERR(drvdata->battery);
-		hid_err(hid_dev, "failed to register battery '%s' (reason: %i)\n",
+		hid_err(hid_dev, "failed to register battery '%s' (reason: %d)\n",
 			name, ret);
 		goto failed_after_hid_start;
 	}
