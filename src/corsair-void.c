@@ -373,7 +373,7 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 	}
 
 	name_length = snprintf(NULL, 0, "corsair-void-%d-battery", hid_dev->id);
-	name = devm_kzalloc(drvdata->dev, 14, GFP_KERNEL);
+	name = devm_kzalloc(drvdata->dev, name_length + 1, GFP_KERNEL);
 	if (!name) {
 		ret = -ENOMEM;
 		goto failed_after_hid_start;
