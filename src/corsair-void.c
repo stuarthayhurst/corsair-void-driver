@@ -305,7 +305,7 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 			USB_CTRL_SET_TIMEOUT, GFP_KERNEL);
 
 	if (ret) {
-		dev_warn(dev, "failed to send alert request (reason %d)", ret);
+		dev_warn(dev, "failed to send alert request (reason: %d)", ret);
 	} else {
 		ret = count;
 	}
