@@ -93,7 +93,7 @@ struct corsair_void_drvdata {
 	struct hid_device *hid_dev;
 	struct device *dev;
 
-	char* name;
+	char *name;
 
 	struct corsair_void_raw_receiver_info raw_receiver_info;
 	struct corsair_void_battery_data battery_data;
@@ -248,10 +248,10 @@ static int corsair_void_battery_get_property(struct power_supply *psy,
 
 static ssize_t corsair_void_report_mic_up(struct device *dev,
 					  struct device_attribute *attr,
-					  char* buf)
+					  char *buf)
 {
 
-	struct corsair_void_drvdata* drvdata = dev_get_drvdata(dev);
+	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
 
 	return sysfs_emit(buf, "%d\n", drvdata->mic_up);
 }
@@ -406,7 +406,7 @@ static void corsair_void_remove(struct hid_device *hid_dev)
 
 static int corsair_void_raw_event(struct hid_device *hid_dev,
 				  struct hid_report *hid_report,
-				  u8* data, int size)
+				  u8 *data, int size)
 {
 	struct corsair_void_drvdata *drvdata = hid_get_drvdata(hid_dev);
 
