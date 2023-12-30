@@ -60,12 +60,7 @@ INDEX: PROPERTY
 
 #include "hid-ids.h"
 
-#define CORSAIR_VOID_CONTROL_REQUEST 0x09
-#define CORSAIR_VOID_CONTROL_REQUEST_TYPE 0x21
-#define CORSAIR_VOID_CONTROL_INDEX 3
-
-#define CORSAIR_VOID_CONTROL_ALERT_VALUE 0x02CA
-
+#define CORSAIR_VOID_NOTIF_REPORT_ID 0xCA
 #define CORSAIR_VOID_BATTERY_REPORT_ID 100
 
 #define CORSAIR_VOID_MIC_MASK GENMASK(7, 7)
@@ -269,13 +264,11 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 				       struct device_attribute *attr,
 				       const char *buf, size_t count)
 {
-	int ret = 0;
-
-	struct usb_interface *usb_if = to_usb_interface(dev->parent);
-	struct usb_device *usb_dev = interface_to_usbdev(usb_if);
-
-	unsigned char* send_buf;
+	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
+	struct hid_device *hid_dev = drvdata->hid_dev;
 	unsigned char alert_id;
+	unsigned char send_buf[3];
+	int ret = 0;
 
 	if (kstrtou8(buf, 10, &alert_id)) {
 		return -EINVAL;
@@ -286,32 +279,19 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 		return -EINVAL;
 	}
 
-	send_buf = kmalloc(3, GFP_KERNEL);
-	if (!send_buf) {
-		return -ENOMEM;
-	}
-
 	/* Packet format to send alert with ID alert_id */
-	send_buf[0] = 0xCA;
+	send_buf[0] = CORSAIR_VOID_NOTIF_REPORT_ID;
 	send_buf[1] = 0x02;
 	send_buf[2] = alert_id;
 
-	ret = usb_control_msg_send(usb_dev, 0,
-			CORSAIR_VOID_CONTROL_REQUEST,
-			CORSAIR_VOID_CONTROL_REQUEST_TYPE,
-			CORSAIR_VOID_CONTROL_ALERT_VALUE,
-			CORSAIR_VOID_CONTROL_INDEX,
-			send_buf, 3,
-			USB_CTRL_SET_TIMEOUT, GFP_KERNEL);
-
-	if (ret) {
+	ret = hid_hw_raw_request(hid_dev, CORSAIR_VOID_NOTIF_REPORT_ID,
+			  send_buf, 3, HID_OUTPUT_REPORT, HID_REQ_SET_REPORT);
+	if (ret < 0) {
 		dev_warn(dev, "failed to send alert request (reason: %d)", ret);
-	} else {
-		ret = count;
+		return ret;
 	}
 
-	kfree(send_buf);
-	return ret;
+	return count;
 }
 
 /*
