@@ -19,7 +19,7 @@
   - [ ] LED support (on / off, brightness, colour)
   - [ ] Sidetone support
   - [ ] Misc device / kernel attributes
-    - [x] `(USB) wireless_status` (untested - requires kernel 6.4+)
+    - [x] `(USB) wireless_status` (requires kernel 6.4+)
     - [x] `(sysfs) microphone_up: [0 / 1] (read-only)`
     - [x] `(sysfs) send_alert: [0 / 1] (write-only)`
     - [ ] `(sysfs) firmware_version`
