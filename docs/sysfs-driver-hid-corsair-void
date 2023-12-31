@@ -11,3 +11,9 @@ Date:		July 2023
 KernelVersion:	T.B.C
 Contact:	Stuart Hayhurst <stuart.a.hayhurst@gmail.com>
 Description:	(W) Play a built-in notification from the headset (0 / 1)
+
+What:		/sys/bus/hid/drivers/corsair-void/<dev>/set_sidetone
+Date:		December 2023
+KernelVersion:	T.B.C
+Contact:	Stuart Hayhurst <stuart.a.hayhurst@gmail.com>
+Description:	(W) Set the sidetone volume (0 - 55)

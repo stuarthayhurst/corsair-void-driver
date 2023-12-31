@@ -62,6 +62,7 @@ INDEX: PROPERTY
 
 #define CORSAIR_VOID_BATTERY_REQUEST_ID 0xC9
 #define CORSAIR_VOID_NOTIF_REPORT_ID 0xCA
+#define CORSAIR_VOID_SIDETONE_REPORT_ID 0xFF
 #define CORSAIR_VOID_BATTERY_REPORT_ID 0x64
 
 #define CORSAIR_VOID_MIC_MASK GENMASK(7, 7)
@@ -295,6 +296,56 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 	return count;
 }
 
+static ssize_t corsair_void_send_sidetone(struct device *dev,
+					  struct device_attribute *attr,
+					  const char *buf, size_t count)
+{
+	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
+	struct hid_device *hid_dev = drvdata->hid_dev;
+	unsigned char sidetone;
+	unsigned char *send_buf;
+	int ret;
+
+	if (kstrtou8(buf, 10, &sidetone)) {
+		return -EINVAL;
+	}
+
+	/* sidetone must be between 0 and 55 inclusive */
+	if (sidetone > 55) {
+		return -EINVAL;
+	}
+
+	send_buf = kzalloc(64, GFP_KERNEL);
+	if (!send_buf) {
+		return -ENOMEM;
+	}
+
+	/* Packet format to set sidetone */
+	send_buf[0] = CORSAIR_VOID_SIDETONE_REPORT_ID;
+	send_buf[1] = 0x0B;
+	send_buf[2] = 0x00;
+	send_buf[3] = 0xFF;
+	send_buf[4] = 0x04;
+	send_buf[5] = 0x0E;
+	send_buf[6] = 0xFF;
+	send_buf[7] = 0x05;
+	send_buf[8] = 0x01;
+	send_buf[9] = 0x04;
+	send_buf[10] = 0x00;
+	send_buf[11] = sidetone + 200;
+
+	ret = hid_hw_raw_request(hid_dev, CORSAIR_VOID_SIDETONE_REPORT_ID,
+				 send_buf, 64, HID_FEATURE_REPORT, HID_REQ_SET_REPORT);
+	if (ret < 0) {
+		hid_warn(hid_dev, "failed to send sidetone (reason: %d)", ret);
+	} else {
+		ret = count;
+	}
+
+	kfree(send_buf);
+	return ret;
+}
+
 static int corsair_void_refresh_battery(struct hid_device *hid_dev)
 {
 	unsigned char send_buf[2];
@@ -323,9 +374,12 @@ static DEVICE_ATTR(microphone_up, 0444, corsair_void_report_mic_up, NULL);
 /* Write-only alert, as it only plays a sound (nothing to report back) */
 static DEVICE_ATTR(send_alert, 0200, NULL, corsair_void_send_alert);
 
+static DEVICE_ATTR(set_sidetone, 0200, NULL, corsair_void_send_sidetone);
+
 static struct attribute *corsair_void_attrs[] = {
 	&dev_attr_microphone_up.attr,
 	&dev_attr_send_alert.attr,
+	&dev_attr_set_sidetone.attr,
 	NULL,
 };
 
