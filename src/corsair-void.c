@@ -60,6 +60,7 @@ INDEX: PROPERTY
 
 #include "hid-ids.h"
 
+#define CORSAIR_VOID_BATTERY_REQUEST_ID 0xC9
 #define CORSAIR_VOID_NOTIF_REPORT_ID 0xCA
 #define CORSAIR_VOID_BATTERY_REPORT_ID 0x64
 
@@ -268,7 +269,7 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 	struct hid_device *hid_dev = drvdata->hid_dev;
 	unsigned char alert_id;
 	unsigned char send_buf[3];
-	int ret = 0;
+	int ret;
 
 	if (kstrtou8(buf, 10, &alert_id)) {
 		return -EINVAL;
@@ -292,6 +293,26 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 	}
 
 	return count;
+}
+
+static int corsair_void_refresh_battery(struct hid_device *hid_dev)
+{
+	unsigned char send_buf[2];
+	int ret;
+
+	/* Packet format to request battery refresh */
+	send_buf[0] = CORSAIR_VOID_BATTERY_REQUEST_ID;
+	send_buf[1] = CORSAIR_VOID_BATTERY_REPORT_ID;
+
+	/* Hardware doesn't directly reply, it triggers an event */
+	ret = hid_hw_raw_request(hid_dev, CORSAIR_VOID_BATTERY_REQUEST_ID,
+			  send_buf, 2, HID_OUTPUT_REPORT, HID_REQ_SET_REPORT);
+	if (ret < 0) {
+		hid_warn(hid_dev, "failed to send battery refresh (reason: %d)", ret);
+		return ret;
+	}
+
+	return 0;
 }
 
 /*
@@ -387,6 +408,9 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 	}
 
 	/* Any failures after here should go to failed_after_sysfs */
+
+	/* Refresh battery data, in case headset is already connected */
+	corsair_void_refresh_battery(hid_dev);
 
 	goto success;
 
