@@ -176,7 +176,7 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata) 
 			battery_data->status = POWER_SUPPLY_STATUS_CHARGING;
 			break;
 		default:
-			dev_warn(drvdata->dev, "unknown receiver status '%d'",
+			hid_warn(drvdata->hid_dev, "unknown receiver status '%d'",
 				 raw_receiver_info->battery_status);
 			goto unknown_data;
 			break;
@@ -288,7 +288,7 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 	ret = hid_hw_raw_request(hid_dev, CORSAIR_VOID_NOTIF_REPORT_ID,
 			  send_buf, 3, HID_OUTPUT_REPORT, HID_REQ_SET_REPORT);
 	if (ret < 0) {
-		dev_warn(dev, "failed to send alert request (reason: %d)", ret);
+		hid_warn(hid_dev, "failed to send alert request (reason: %d)", ret);
 		return ret;
 	}
 
