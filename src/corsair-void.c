@@ -436,6 +436,7 @@ static DEVICE_ATTR(fw_version_headset, 0444,
 
 /* Write-only alert, as it only plays a sound (nothing to report back) */
 static DEVICE_ATTR(send_alert, 0200, NULL, corsair_void_send_alert);
+/* Write-only alert, as sidetone volume can't be queried */
 static DEVICE_ATTR(set_sidetone, 0200, NULL, corsair_void_send_sidetone);
 
 static struct attribute *corsair_void_attrs[] = {
