@@ -79,6 +79,7 @@ INDEX: PROPERTY
 #include <linux/module.h>
 #include <linux/power_supply.h>
 #include <linux/usb.h>
+#include <linux/workqueue.h>
 
 /* Only required for pre-Linux 6.4 support */
 #include <linux/version.h>
@@ -134,6 +135,8 @@ struct corsair_void_drvdata {
 
 	struct power_supply *battery;
 	struct power_supply_desc battery_desc;
+
+	struct delayed_work delayed_firmware_work;
 };
 
 /*
@@ -452,8 +455,18 @@ static int corsair_void_refresh_firmware(struct hid_device *hid_dev)
 }
 
 /*
- - Driver setup, probing and HID event handling
+ - Driver setup, probing, HID event handling and work handling
 */
+
+void firmware_work_handler(struct work_struct *work)
+{
+	struct corsair_void_drvdata *drvdata;
+	struct delayed_work *delayed_work;
+
+	delayed_work = container_of(work, struct delayed_work, work);
+	drvdata = container_of(delayed_work, struct corsair_void_drvdata, delayed_firmware_work);
+	corsair_void_refresh_firmware(drvdata->hid_dev);
+}
 
 static DEVICE_ATTR(microphone_up, 0444, corsair_void_report_mic_up, NULL);
 static DEVICE_ATTR(fw_version_receiver, 0444,
@@ -505,8 +518,13 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 	drvdata->hid_dev = hid_dev;
 
 	/* Set initial values for no headset attached */
-	/* If a headset is attached, it'll send a packet soon enough */
+	/* If a headset is attached, it'll be prompted later */
 	corsair_void_set_unknown_data(drvdata);
+
+	/* Set receiver firmware version, as set_unknown_data doesn't handle it */
+	/* Receiver version won't be 0 after init during the driver's lifetime */
+	drvdata->raw_receiver_info.fw_receiver_major = 0;
+	drvdata->raw_receiver_info.fw_receiver_minor = 0;
 
 	ret = hid_parse(hid_dev);
 	if (ret) {
@@ -558,12 +576,10 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 	/* Refresh battery data, in case headset is already connected */
 	corsair_void_refresh_battery(hid_dev);
 
-	/* Set receiver firmware version, as set_unknown_data doesn't handle it */
-	drvdata->raw_receiver_info.fw_receiver_major = 0;
-	drvdata->raw_receiver_info.fw_receiver_minor = 0;
-
-	/* Refresh firmware versions */
-	corsair_void_refresh_firmware(hid_dev);
+	/* Refresh firmware versions, after a 100ms delay */
+	/* Otherwise, the hardware responds to either the battery or the firmware */
+	INIT_DELAYED_WORK(&drvdata->delayed_firmware_work, firmware_work_handler);
+	schedule_delayed_work(&drvdata->delayed_firmware_work, msecs_to_jiffies(100));
 
 	goto success;
 
@@ -577,6 +593,9 @@ success:
 
 static void corsair_void_remove(struct hid_device *hid_dev)
 {
+	struct corsair_void_drvdata *drvdata = hid_get_drvdata(hid_dev);
+
+	cancel_delayed_work_sync(&drvdata->delayed_firmware_work);
 	sysfs_remove_group(&hid_dev->dev.kobj, &corsair_void_attr_group);
 	hid_hw_stop(hid_dev);
 }
