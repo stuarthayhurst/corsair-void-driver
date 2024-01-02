@@ -60,10 +60,11 @@ INDEX: PROPERTY
 
 #include "hid-ids.h"
 
-#define CORSAIR_VOID_BATTERY_REQUEST_ID 0xC9
+#define CORSAIR_VOID_STATUS_REQUEST_ID 0xC9
 #define CORSAIR_VOID_NOTIF_REPORT_ID 0xCA
 #define CORSAIR_VOID_SIDETONE_REPORT_ID 0xFF
 #define CORSAIR_VOID_BATTERY_REPORT_ID 0x64
+#define CORSAIR_VOID_FIRMWARE_REPORT_ID 0x66
 
 #define CORSAIR_VOID_MIC_MASK GENMASK(7, 7)
 #define CORSAIR_VOID_CAPACITY_MASK GENMASK(6, 0)
@@ -89,6 +90,11 @@ struct corsair_void_raw_receiver_info {
 	int battery_capacity;
 	int connection_status;
 	int battery_status;
+
+	int fw_receiver_major;
+	int fw_receiver_minor;
+	int fw_headset_major;
+	int fw_headset_minor;
 };
 
 struct corsair_void_drvdata {
@@ -128,6 +134,10 @@ static void corsair_void_set_unknown_data(struct corsair_void_drvdata *drvdata)
 	battery_data->present = 0;
 	battery_data->capacity = 0;
 	battery_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
+
+	/* Only 0 out headset firmware, as receiver should always be known */
+	drvdata->raw_receiver_info.fw_headset_major = 0;
+	drvdata->raw_receiver_info.fw_headset_minor = 0;
 
 	drvdata->mic_up = 0;
 
@@ -252,10 +262,38 @@ static ssize_t corsair_void_report_mic_up(struct device *dev,
 					  struct device_attribute *attr,
 					  char *buf)
 {
-
 	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
-
 	return sysfs_emit(buf, "%d\n", drvdata->mic_up);
+}
+
+static ssize_t corsair_void_report_firmware_receiver(struct device *dev,
+						     struct device_attribute *attr,
+						     char *buf)
+{
+	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
+	int major = drvdata->raw_receiver_info.fw_receiver_major;
+	int minor = drvdata->raw_receiver_info.fw_receiver_minor;
+
+	if (major == 0 && minor == 0) {
+		return -ENODATA;
+	}
+
+	return sysfs_emit(buf, "%d.%02d\n", major, minor);
+}
+
+static ssize_t corsair_void_report_firmware_headset(struct device *dev,
+						    struct device_attribute *attr,
+						    char *buf)
+{
+	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
+	int major = drvdata->raw_receiver_info.fw_headset_major;
+	int minor = drvdata->raw_receiver_info.fw_headset_minor;
+
+	if (major == 0 && minor == 0) {
+		return -ENODATA;
+	}
+
+	return sysfs_emit(buf, "%d.%02d\n", major, minor);
 }
 
 /*
@@ -352,14 +390,34 @@ static int corsair_void_refresh_battery(struct hid_device *hid_dev)
 	int ret;
 
 	/* Packet format to request battery refresh */
-	send_buf[0] = CORSAIR_VOID_BATTERY_REQUEST_ID;
+	send_buf[0] = CORSAIR_VOID_STATUS_REQUEST_ID;
 	send_buf[1] = CORSAIR_VOID_BATTERY_REPORT_ID;
 
 	/* Hardware doesn't directly reply, it triggers an event */
-	ret = hid_hw_raw_request(hid_dev, CORSAIR_VOID_BATTERY_REQUEST_ID,
+	ret = hid_hw_raw_request(hid_dev, CORSAIR_VOID_STATUS_REQUEST_ID,
 			  send_buf, 2, HID_OUTPUT_REPORT, HID_REQ_SET_REPORT);
 	if (ret < 0) {
 		hid_warn(hid_dev, "failed to send battery refresh (reason: %d)", ret);
+		return ret;
+	}
+
+	return 0;
+}
+
+static int corsair_void_refresh_firmware(struct hid_device *hid_dev)
+{
+	unsigned char send_buf[2];
+	int ret;
+
+	/* Packet format to request battery refresh */
+	send_buf[0] = CORSAIR_VOID_STATUS_REQUEST_ID;
+	send_buf[1] = CORSAIR_VOID_FIRMWARE_REPORT_ID;
+
+	/* Hardware doesn't directly reply, it triggers an event */
+	ret = hid_hw_raw_request(hid_dev, CORSAIR_VOID_STATUS_REQUEST_ID,
+			  send_buf, 2, HID_OUTPUT_REPORT, HID_REQ_SET_REPORT);
+	if (ret < 0) {
+		hid_warn(hid_dev, "failed to send firmware refresh (reason: %d)", ret);
 		return ret;
 	}
 
@@ -371,15 +429,21 @@ static int corsair_void_refresh_battery(struct hid_device *hid_dev)
 */
 
 static DEVICE_ATTR(microphone_up, 0444, corsair_void_report_mic_up, NULL);
+static DEVICE_ATTR(fw_version_receiver, 0444,
+		   corsair_void_report_firmware_receiver, NULL);
+static DEVICE_ATTR(fw_version_headset, 0444,
+		   corsair_void_report_firmware_headset, NULL);
+
 /* Write-only alert, as it only plays a sound (nothing to report back) */
 static DEVICE_ATTR(send_alert, 0200, NULL, corsair_void_send_alert);
-
 static DEVICE_ATTR(set_sidetone, 0200, NULL, corsair_void_send_sidetone);
 
 static struct attribute *corsair_void_attrs[] = {
 	&dev_attr_microphone_up.attr,
 	&dev_attr_send_alert.attr,
 	&dev_attr_set_sidetone.attr,
+	&dev_attr_fw_version_receiver.attr,
+	&dev_attr_fw_version_headset.attr,
 	NULL,
 };
 
@@ -466,6 +530,13 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 	/* Refresh battery data, in case headset is already connected */
 	corsair_void_refresh_battery(hid_dev);
 
+	/* Set receiver firmware version, as set_unknown_data doesn't handle it */
+	drvdata->raw_receiver_info.fw_receiver_major = 0;
+	drvdata->raw_receiver_info.fw_receiver_minor = 0;
+
+	/* Refresh firmware versions */
+	corsair_void_refresh_firmware(hid_dev);
+
 	goto success;
 
 /*failed_after_sysfs:
@@ -498,6 +569,11 @@ static int corsair_void_raw_event(struct hid_device *hid_dev,
 		drvdata->mic_up = FIELD_GET(CORSAIR_VOID_MIC_MASK, data[2]);
 
 		corsair_void_process_receiver(drvdata);
+	} else if (hid_report->id == CORSAIR_VOID_FIRMWARE_REPORT_ID) {
+		drvdata->raw_receiver_info.fw_receiver_major = data[1];
+		drvdata->raw_receiver_info.fw_receiver_minor = data[2];
+		drvdata->raw_receiver_info.fw_headset_major = data[3];
+		drvdata->raw_receiver_info.fw_headset_minor = data[4];
 	}
 
 	return 0;

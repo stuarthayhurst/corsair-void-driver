@@ -1,3 +1,16 @@
+What:		/sys/bus/hid/drivers/corsair-void/<dev>/fw_version_headset
+Date:		January 2024
+KernelVersion:	T.B.C
+Contact:	Stuart Hayhurst <stuart.a.hayhurst@gmail.com>
+Description:	(R) The firmware version of the headset
+			* Returns -ENODATA if no headset is attached
+
+What:		/sys/bus/hid/drivers/corsair-void/<dev>/fw_version_receiver
+Date:		January 2024
+KernelVersion:	T.B.C
+Contact:	Stuart Hayhurst <stuart.a.hayhurst@gmail.com>
+Description:	(R) The firmware version of the receiver
+
 What:		/sys/bus/hid/drivers/corsair-void/<dev>/microphone_up
 Date:		July 2023
 KernelVersion:	T.B.C
