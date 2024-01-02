@@ -48,6 +48,31 @@ INDEX: PROPERTY
 */
 /* ------------------------------------------------------------------------- */
 
+/* ------------------------------------------------------------------------- */
+/* Receiver report information: (ID 102)                                     */
+/* ------------------------------------------------------------------------- */
+/*
+ - When queried, the recevier responds with 4 bytes to describe the firmware
+ - The first 2 bytes are for the receiver, the second 2 are the headset
+ - The headset firmware's version may be 0 if it's disconnected
+
+INDEX: PROPERTY
+ 0: Recevier firmware major version
+  - Major version of the receiver's firmware
+
+ 1: Recevier firmware minor version
+  - Minor version of the receiver's firmware
+
+ 2: Headset firmware major version
+  - Major version of the receiver's firmware
+  - This may be 0 if no headset is connected (version dependent)
+
+ 3: Headset firmware minor version
+  - Minor version of the receiver's firmware
+  - This may be 0 if no headset is connected (version dependent)
+*/
+/* ------------------------------------------------------------------------- */
+
 #include <linux/bitfield.h>
 #include <linux/bitops.h>
 #include <linux/hid.h>
@@ -573,6 +598,7 @@ static int corsair_void_raw_event(struct hid_device *hid_dev,
 
 		corsair_void_process_receiver(drvdata);
 	} else if (hid_report->id == CORSAIR_VOID_FIRMWARE_REPORT_ID) {
+		/* Description of packet is documented at the top of this file */
 		drvdata->raw_receiver_info.fw_receiver_major = data[1];
 		drvdata->raw_receiver_info.fw_receiver_minor = data[2];
 		drvdata->raw_receiver_info.fw_headset_major = data[3];
