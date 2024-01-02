@@ -87,8 +87,8 @@ INDEX: PROPERTY
 #include "hid-ids.h"
 
 #define CORSAIR_VOID_STATUS_REQUEST_ID		0xC9
-#define CORSAIR_VOID_NOTIF_REPORT_ID		0xCA
-#define CORSAIR_VOID_SIDETONE_REPORT_ID		0xFF
+#define CORSAIR_VOID_NOTIF_REQUEST_ID		0xCA
+#define CORSAIR_VOID_SIDETONE_REQUEST_ID	0xFF
 #define CORSAIR_VOID_BATTERY_REPORT_ID		0x64
 #define CORSAIR_VOID_FIRMWARE_REPORT_ID		0x66
 
@@ -350,11 +350,11 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 	}
 
 	/* Packet format to send alert with ID alert_id */
-	send_buf[0] = CORSAIR_VOID_NOTIF_REPORT_ID;
+	send_buf[0] = CORSAIR_VOID_NOTIF_REQUEST_ID;
 	send_buf[1] = 0x02;
 	send_buf[2] = alert_id;
 
-	ret = hid_hw_raw_request(hid_dev, CORSAIR_VOID_NOTIF_REPORT_ID,
+	ret = hid_hw_raw_request(hid_dev, CORSAIR_VOID_NOTIF_REQUEST_ID,
 			  send_buf, 3, HID_OUTPUT_REPORT, HID_REQ_SET_REPORT);
 	if (ret < 0) {
 		hid_warn(hid_dev, "failed to send alert request (reason: %d)", ret);
@@ -389,7 +389,7 @@ static ssize_t corsair_void_send_sidetone(struct device *dev,
 	}
 
 	/* Packet format to set sidetone */
-	send_buf[0] = CORSAIR_VOID_SIDETONE_REPORT_ID;
+	send_buf[0] = CORSAIR_VOID_SIDETONE_REQUEST_ID;
 	send_buf[1] = 0x0B;
 	send_buf[2] = 0x00;
 	send_buf[3] = 0xFF;
@@ -402,7 +402,7 @@ static ssize_t corsair_void_send_sidetone(struct device *dev,
 	send_buf[10] = 0x00;
 	send_buf[11] = sidetone + 200;
 
-	ret = hid_hw_raw_request(hid_dev, CORSAIR_VOID_SIDETONE_REPORT_ID,
+	ret = hid_hw_raw_request(hid_dev, CORSAIR_VOID_SIDETONE_REQUEST_ID,
 				 send_buf, 64, HID_FEATURE_REPORT, HID_REQ_SET_REPORT);
 	if (ret < 0) {
 		hid_warn(hid_dev, "failed to send sidetone (reason: %d)", ret);
