@@ -64,11 +64,11 @@ INDEX: PROPERTY
   - Minor version of the receiver's firmware
 
  2: Headset firmware major version
-  - Major version of the receiver's firmware
+  - Major version of the headset's firmware
   - This may be 0 if no headset is connected (version dependent)
 
  3: Headset firmware minor version
-  - Minor version of the receiver's firmware
+  - Minor version of the headset's firmware
   - This may be 0 if no headset is connected (version dependent)
 */
 /* ------------------------------------------------------------------------- */
