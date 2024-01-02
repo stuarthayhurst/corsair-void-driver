@@ -263,7 +263,17 @@ static ssize_t corsair_void_report_mic_up(struct device *dev,
 					  char *buf)
 {
 	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
+
 	return sysfs_emit(buf, "%d\n", drvdata->mic_up);
+}
+
+static ssize_t corsair_void_report_firmware(char* buf, int major, int minor)
+{
+	if (major == 0 && minor == 0) {
+		return -ENODATA;
+	}
+
+	return sysfs_emit(buf, "%d.%02d\n", major, minor);
 }
 
 static ssize_t corsair_void_report_firmware_receiver(struct device *dev,
@@ -271,14 +281,10 @@ static ssize_t corsair_void_report_firmware_receiver(struct device *dev,
 						     char *buf)
 {
 	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
-	int major = drvdata->raw_receiver_info.fw_receiver_major;
-	int minor = drvdata->raw_receiver_info.fw_receiver_minor;
+	struct corsair_void_raw_receiver_info *receiver_info = &drvdata->raw_receiver_info;
 
-	if (major == 0 && minor == 0) {
-		return -ENODATA;
-	}
-
-	return sysfs_emit(buf, "%d.%02d\n", major, minor);
+	return corsair_void_report_firmware(buf, receiver_info->fw_receiver_major,
+					    receiver_info->fw_receiver_minor);
 }
 
 static ssize_t corsair_void_report_firmware_headset(struct device *dev,
@@ -286,14 +292,10 @@ static ssize_t corsair_void_report_firmware_headset(struct device *dev,
 						    char *buf)
 {
 	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
-	int major = drvdata->raw_receiver_info.fw_headset_major;
-	int minor = drvdata->raw_receiver_info.fw_headset_minor;
+	struct corsair_void_raw_receiver_info *receiver_info = &drvdata->raw_receiver_info;
 
-	if (major == 0 && minor == 0) {
-		return -ENODATA;
-	}
-
-	return sysfs_emit(buf, "%d.%02d\n", major, minor);
+	return corsair_void_report_firmware(buf, receiver_info->fw_headset_major,
+					    receiver_info->fw_headset_minor);
 }
 
 /*
