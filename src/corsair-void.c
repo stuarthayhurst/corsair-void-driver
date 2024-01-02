@@ -414,7 +414,7 @@ static ssize_t corsair_void_send_sidetone(struct device *dev,
 	return ret;
 }
 
-static int corsair_void_refresh_status(struct hid_device *hid_dev, int id)
+static int corsair_void_request_status(struct hid_device *hid_dev, int id)
 {
 	unsigned char send_buf[2];
 	int ret;
@@ -429,10 +429,10 @@ static int corsair_void_refresh_status(struct hid_device *hid_dev, int id)
 	if (ret < 0) {
 		switch (id) {
 		case CORSAIR_VOID_BATTERY_REPORT_ID:
-			hid_warn(hid_dev, "failed to send battery refresh (reason: %d)", ret);
+			hid_warn(hid_dev, "failed to request battery (reason: %d)", ret);
 			break;
 		case CORSAIR_VOID_FIRMWARE_REPORT_ID:
-			hid_warn(hid_dev, "failed to send firmware refresh (reason: %d)", ret);
+			hid_warn(hid_dev, "failed to request firmware (reason: %d)", ret);
 			break;
 		}
 		return ret;
@@ -453,7 +453,7 @@ void firmware_work_handler(struct work_struct *work)
 	delayed_work = container_of(work, struct delayed_work, work);
 	drvdata = container_of(delayed_work, struct corsair_void_drvdata, delayed_firmware_work);
 
-	corsair_void_refresh_status(drvdata->hid_dev,
+	corsair_void_request_status(drvdata->hid_dev,
 				    CORSAIR_VOID_FIRMWARE_REPORT_ID);
 }
 
@@ -563,7 +563,7 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 	/* Any failures after here should go to failed_after_sysfs */
 
 	/* Refresh battery data, in case headset is already connected */
-	corsair_void_refresh_status(hid_dev, CORSAIR_VOID_BATTERY_REPORT_ID);
+	corsair_void_request_status(hid_dev, CORSAIR_VOID_BATTERY_REPORT_ID);
 
 	/* Refresh firmware versions, after a 100ms delay */
 	/* Otherwise, the hardware responds to either the battery or the firmware */
