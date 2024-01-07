@@ -451,22 +451,7 @@ static int corsair_void_request_status(struct hid_device *hid_dev, int id)
 }
 
 /*
- - Headset connect / disconnect handlers
-*/
-
-static void corsair_void_headset_connected(struct corsair_void_drvdata *drvdata)
-{
-	return;
-}
-
-static void corsair_void_headset_disconnected(struct corsair_void_drvdata *drvdata)
-{
-	corsair_void_set_unknown_data(drvdata);
-	corsair_void_set_unknown_batt(drvdata);
-}
-
-/*
- - Driver setup, probing, HID event handling and work handling
+ - Headset connect / disconnect handlers and firmware work handler
 */
 
 void firmware_work_handler(struct work_struct *work)
@@ -480,6 +465,21 @@ void firmware_work_handler(struct work_struct *work)
 	corsair_void_request_status(drvdata->hid_dev,
 				    CORSAIR_VOID_FIRMWARE_REPORT_ID);
 }
+
+static void corsair_void_headset_connected(struct corsair_void_drvdata *drvdata)
+{
+	schedule_delayed_work(&drvdata->delayed_firmware_work, msecs_to_jiffies(100));
+}
+
+static void corsair_void_headset_disconnected(struct corsair_void_drvdata *drvdata)
+{
+	corsair_void_set_unknown_data(drvdata);
+	corsair_void_set_unknown_batt(drvdata);
+}
+
+/*
+ - Driver setup, probing, HID event handling
+*/
 
 static DEVICE_ATTR(microphone_up, 0444, corsair_void_report_mic_up, NULL);
 static DEVICE_ATTR(fw_version_receiver, 0444,
