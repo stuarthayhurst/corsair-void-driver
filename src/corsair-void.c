@@ -219,7 +219,7 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata) 
 			battery_data->status = POWER_SUPPLY_STATUS_CHARGING;
 			break;
 		default:
-			hid_warn(drvdata->hid_dev, "unknown receiver status '%d'",
+			hid_warn(drvdata->hid_dev, "unknown battery status '%d'",
 				 raw_receiver_info->battery_status);
 			goto unknown_data;
 			break;
