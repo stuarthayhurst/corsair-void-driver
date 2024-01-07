@@ -451,6 +451,21 @@ static int corsair_void_request_status(struct hid_device *hid_dev, int id)
 }
 
 /*
+ - Headset connect / disconnect handlers
+*/
+
+static void corsair_void_headset_connected(struct corsair_void_drvdata *drvdata)
+{
+	return;
+}
+
+static void corsair_void_headset_disconnected(struct corsair_void_drvdata *drvdata)
+{
+	corsair_void_set_unknown_data(drvdata);
+	corsair_void_set_unknown_batt(drvdata);
+}
+
+/*
  - Driver setup, probing, HID event handling and work handling
 */
 
@@ -604,6 +619,7 @@ static int corsair_void_raw_event(struct hid_device *hid_dev,
 				  u8 *data, int size)
 {
 	struct corsair_void_drvdata *drvdata = hid_get_drvdata(hid_dev);
+	int was_connected = drvdata->raw_receiver_info.connected;
 
 	if (hid_report->id == CORSAIR_VOID_BATTERY_REPORT_ID) {
 		/* Description of packet is documented at the top of this file */
@@ -622,6 +638,15 @@ static int corsair_void_raw_event(struct hid_device *hid_dev,
 		drvdata->raw_receiver_info.fw_receiver_minor = data[2];
 		drvdata->raw_receiver_info.fw_headset_major = data[3];
 		drvdata->raw_receiver_info.fw_headset_minor = data[4];
+	}
+
+	/* Handle headset connect / disconnect */
+	if (was_connected != drvdata->raw_receiver_info.connected) {
+		if (drvdata->raw_receiver_info.connected) {
+			corsair_void_headset_connected(drvdata);
+		} else {
+			corsair_void_headset_disconnected(drvdata);
+		}
 	}
 
 	return 0;
