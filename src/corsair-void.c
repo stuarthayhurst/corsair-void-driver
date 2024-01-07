@@ -156,7 +156,7 @@ static void corsair_void_set_wireless_status(struct corsair_void_drvdata *drvdat
 }
 #endif
 
-static void corsair_void_set_unknown_data(struct corsair_void_drvdata *drvdata)
+static void corsair_void_set_unknown_batt(struct corsair_void_drvdata *drvdata)
 {
 	struct corsair_void_battery_data *battery_data = &drvdata->battery_data;
 
@@ -164,13 +164,15 @@ static void corsair_void_set_unknown_data(struct corsair_void_drvdata *drvdata)
 	battery_data->present = 0;
 	battery_data->capacity = 0;
 	battery_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
+}
 
-	drvdata->raw_receiver_info.connected = 0;
-
-	/* Only 0 out headset firmware, as receiver should always be known */
+static void corsair_void_set_unknown_data(struct corsair_void_drvdata *drvdata)
+{
+	/* Only 0 out headset firmware, receiver version is always be known */
 	drvdata->raw_receiver_info.fw_headset_major = 0;
 	drvdata->raw_receiver_info.fw_headset_minor = 0;
 
+	drvdata->raw_receiver_info.connected = 0;
 	drvdata->mic_up = 0;
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
@@ -190,10 +192,10 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata) 
 	/* Check connection and battery status to set battery data */
 	if (raw_receiver_info->connection_status != 177) {
 		/* Headset not connected */
-		goto unknown_data;
+		goto unknown_battery;
 	} else if (raw_receiver_info->battery_status == 0) {
 		/* Battery information unavailable */
-		goto unknown_data;
+		goto unknown_battery;
 	} else {
 		/* Battery connected */
 		battery_data->present = 1;
@@ -221,7 +223,7 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata) 
 		default:
 			hid_warn(drvdata->hid_dev, "unknown battery status '%d'",
 				 raw_receiver_info->battery_status);
-			goto unknown_data;
+			goto unknown_battery;
 			break;
 		}
 
@@ -233,8 +235,8 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata) 
 #endif
 
 	goto success;
-unknown_data:
-	corsair_void_set_unknown_data(drvdata);
+unknown_battery:
+	corsair_void_set_unknown_batt(drvdata);
 success:
 
 	/* Decide if battery values changed */
@@ -516,6 +518,7 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 	/* Set initial values for no headset attached */
 	/* If a headset is attached, it'll be prompted later */
 	corsair_void_set_unknown_data(drvdata);
+	corsair_void_set_unknown_batt(drvdata);
 
 	/* Set receiver firmware version, as set_unknown_data doesn't handle it */
 	/* Receiver version won't be 0 after init during the driver's lifetime */
