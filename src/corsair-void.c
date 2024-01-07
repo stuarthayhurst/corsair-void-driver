@@ -454,7 +454,7 @@ static int corsair_void_request_status(struct hid_device *hid_dev, int id)
  - Headset connect / disconnect handlers and firmware work handler
 */
 
-void firmware_work_handler(struct work_struct *work)
+static void firmware_work_handler(struct work_struct *work)
 {
 	struct corsair_void_drvdata *drvdata;
 	struct delayed_work *delayed_work;
