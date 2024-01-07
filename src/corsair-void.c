@@ -243,8 +243,6 @@ success:
 	if (memcmp(&orig_battery_data, battery_data, battery_struct_size)) {
 		power_supply_changed(drvdata->battery);
 	}
-
-	return;
 }
 
 /*
