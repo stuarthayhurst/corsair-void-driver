@@ -117,6 +117,8 @@ struct corsair_void_raw_receiver_info {
 	int connection_status;
 	int battery_status;
 
+	int connected;
+
 	int fw_receiver_major;
 	int fw_receiver_minor;
 	int fw_headset_major;
@@ -148,7 +150,7 @@ static void corsair_void_set_wireless_status(struct corsair_void_drvdata *drvdat
 {
 	struct usb_interface *usb_if = to_usb_interface(drvdata->dev->parent);
 
-	usb_set_wireless_status(usb_if, drvdata->battery_data.present ?
+	usb_set_wireless_status(usb_if, drvdata->raw_receiver_info.connected ?
 					USB_WIRELESS_STATUS_CONNECTED :
 					USB_WIRELESS_STATUS_DISCONNECTED);
 }
@@ -162,6 +164,8 @@ static void corsair_void_set_unknown_data(struct corsair_void_drvdata *drvdata)
 	battery_data->present = 0;
 	battery_data->capacity = 0;
 	battery_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
+
+	drvdata->raw_receiver_info.connected = 0;
 
 	/* Only 0 out headset firmware, as receiver should always be known */
 	drvdata->raw_receiver_info.fw_headset_major = 0;
@@ -606,6 +610,7 @@ static int corsair_void_raw_event(struct hid_device *hid_dev,
 		drvdata->raw_receiver_info.battery_status = data[4];
 
 		drvdata->mic_up = FIELD_GET(CORSAIR_VOID_MIC_MASK, data[2]);
+		drvdata->raw_receiver_info.connected = (data[3] == 177) ? 1 : 0;
 
 		corsair_void_process_receiver(drvdata);
 	} else if (hid_report->id == CORSAIR_VOID_FIRMWARE_REPORT_ID) {
