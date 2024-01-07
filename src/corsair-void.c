@@ -454,7 +454,7 @@ static int corsair_void_request_status(struct hid_device *hid_dev, int id)
  - Headset connect / disconnect handlers and firmware work handler
 */
 
-static void firmware_work_handler(struct work_struct *work)
+static void corsair_void_firmware_work_handler(struct work_struct *work)
 {
 	struct corsair_void_drvdata *drvdata;
 	struct delayed_work *delayed_work;
@@ -592,7 +592,8 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 
 	/* Refresh firmware versions, after a 100ms delay */
 	/* Otherwise, the hardware responds to either the battery or the firmware */
-	INIT_DELAYED_WORK(&drvdata->delayed_firmware_work, firmware_work_handler);
+	INIT_DELAYED_WORK(&drvdata->delayed_firmware_work,
+			  corsair_void_firmware_work_handler);
 	schedule_delayed_work(&drvdata->delayed_firmware_work, msecs_to_jiffies(100));
 
 	goto success;
