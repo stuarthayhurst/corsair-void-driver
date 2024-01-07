@@ -434,6 +434,9 @@ static int corsair_void_request_status(struct hid_device *hid_dev, int id)
 		case CORSAIR_VOID_FIRMWARE_REPORT_ID:
 			hid_warn(hid_dev, "failed to request firmware (reason: %d)", ret);
 			break;
+		default:
+			hid_warn(hid_dev, "failed to send report %d (reason: %d)", id, ret);
+			break;
 		}
 		return ret;
 	}
