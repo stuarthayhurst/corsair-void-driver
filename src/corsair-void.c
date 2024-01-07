@@ -296,6 +296,10 @@ static ssize_t corsair_void_report_mic_up(struct device *dev,
 {
 	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
 
+	if (!drvdata->raw_receiver_info.connected) {
+		return -ENODATA;
+	}
+
 	return sysfs_emit(buf, "%d\n", drvdata->mic_up);
 }
 
@@ -344,6 +348,10 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 	unsigned char send_buf[3];
 	int ret;
 
+	if (!drvdata->raw_receiver_info.connected) {
+		return -ENODEV;
+	}
+
 	if (kstrtou8(buf, 10, &alert_id)) {
 		return -EINVAL;
 	}
@@ -377,6 +385,10 @@ static ssize_t corsair_void_send_sidetone(struct device *dev,
 	unsigned char sidetone;
 	unsigned char *send_buf;
 	int ret;
+
+	if (!drvdata->raw_receiver_info.connected) {
+		return -ENODEV;
+	}
 
 	if (kstrtou8(buf, 10, &sidetone)) {
 		return -EINVAL;
