@@ -3,7 +3,7 @@
  * HID driver for Corsair Void headsets
  * Report issues to https://github.com/stuarthayhurst/corsair-void-driver/issues
 
- * Copyright (c) 2023 Stuart Hayhurst
+ * Copyright (c) 2023-2024 Stuart Hayhurst
 */
 
 /* ------------------------------------------------------------------------- */
