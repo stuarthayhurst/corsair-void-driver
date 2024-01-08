@@ -601,17 +601,11 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 		hid_err(hid_dev, "parse failed (reason: %d)\n", ret);
 		return ret;
 	}
-	ret = hid_hw_start(hid_dev, HID_CONNECT_DEFAULT);
-	if (ret) {
-		hid_err(hid_dev, "hid_hw_start failed (reason: %d)\n", ret);
-		return ret;
-	}
 
 	name_length = snprintf(NULL, 0, "corsair-void-%d-battery", hid_dev->id);
 	name = devm_kzalloc(drvdata->dev, name_length + 1, GFP_KERNEL);
 	if (!name) {
-		ret = -ENOMEM;
-		goto failed_after_hid_start;
+		return -ENOMEM;
 	}
 	snprintf(name, name_length + 1, "corsair-void-%d-battery", hid_dev->id);
 
@@ -620,16 +614,23 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 	drvdata->battery_desc.properties = corsair_void_battery_props;
 	drvdata->battery_desc.num_properties = ARRAY_SIZE(corsair_void_battery_props);
 	drvdata->battery_desc.get_property = corsair_void_battery_get_property;
+
 	drvdata->battery = NULL;
 	INIT_WORK(&drvdata->battery_remove_work, corsair_void_battery_remove_work_handler);
 	INIT_WORK(&drvdata->battery_add_work, corsair_void_battery_add_work_handler);
 
 	ret = sysfs_create_group(&hid_dev->dev.kobj, &corsair_void_attr_group);
 	if (ret) {
-		goto failed_after_hid_start;
+		return ret;
 	}
 
-	/* Any failures after here should go to failed_after_sysfs */
+	ret = hid_hw_start(hid_dev, HID_CONNECT_DEFAULT);
+	if (ret) {
+		hid_err(hid_dev, "hid_hw_start failed (reason: %d)\n", ret);
+		goto failed_after_sysfs;
+	}
+
+	/* Any failures after here should go to failed_after_hid_start */
 
 	/* Refresh battery data, in case headset is already connected */
 	corsair_void_request_status(hid_dev, CORSAIR_VOID_BATTERY_REPORT_ID);
@@ -642,10 +643,10 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 
 	goto success;
 
-/*failed_after_sysfs:
-	sysfs_remove_group(&hid_dev->dev.kobj, &corsair_void_attr_group);*/
-failed_after_hid_start:
-	hid_hw_stop(hid_dev);
+/*failed_after_hid_start:
+	hid_hw_stop(hid_dev);*/
+failed_after_sysfs:
+	sysfs_remove_group(&hid_dev->dev.kobj, &corsair_void_attr_group);
 success:
 	return ret;
 }
