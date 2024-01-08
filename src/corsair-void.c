@@ -516,7 +516,6 @@ static void corsair_void_battery_add_work_handler(struct work_struct *work)
 			power_supply_unregister(drvdata->battery);
 			drvdata->battery = NULL;
 		}
-
 	}
 }
 
