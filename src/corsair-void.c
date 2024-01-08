@@ -139,6 +139,8 @@ struct corsair_void_drvdata {
 	struct power_supply_desc battery_desc;
 
 	struct delayed_work delayed_firmware_work;
+	struct work_struct battery_remove_work;
+	struct work_struct battery_add_work;
 };
 
 /*
@@ -241,7 +243,9 @@ success:
 
 	/* Decide if battery values changed */
 	if (memcmp(&orig_battery_data, battery_data, battery_struct_size)) {
-		power_supply_changed(drvdata->battery);
+		if (drvdata->battery) {
+			power_supply_changed(drvdata->battery);
+		}
 	}
 }
 
@@ -461,7 +465,7 @@ static int corsair_void_request_status(struct hid_device *hid_dev, int id)
 }
 
 /*
- - Headset connect / disconnect handlers and firmware work handler
+ - Headset connect / disconnect handlers and work handlers
 */
 
 static void corsair_void_firmware_work_handler(struct work_struct *work)
@@ -476,13 +480,55 @@ static void corsair_void_firmware_work_handler(struct work_struct *work)
 				    CORSAIR_VOID_FIRMWARE_REPORT_ID);
 }
 
+static void corsair_void_battery_remove_work_handler(struct work_struct *work)
+{
+	struct corsair_void_drvdata *drvdata;
+
+	drvdata = container_of(work, struct corsair_void_drvdata, battery_remove_work);
+	if (drvdata->battery) {
+		power_supply_unregister(drvdata->battery);
+		drvdata->battery = NULL;
+	}
+}
+
+static void corsair_void_battery_add_work_handler(struct work_struct *work)
+{
+	struct corsair_void_drvdata *drvdata;
+	struct power_supply_config psy_cfg;
+
+	drvdata = container_of(work, struct corsair_void_drvdata, battery_add_work);
+	if (!drvdata->battery) {
+		psy_cfg.drv_data = drvdata;
+		drvdata->battery = power_supply_register(drvdata->dev,
+							 &drvdata->battery_desc,
+							 &psy_cfg);
+
+		if (IS_ERR(drvdata->battery)) {
+			hid_err(drvdata->hid_dev,
+				"failed to register battery '%s' (reason: %ld)\n",
+				drvdata->battery_desc.name,
+				PTR_ERR(drvdata->battery));
+			drvdata->battery = NULL;
+		}
+
+		if (power_supply_powers(drvdata->battery, drvdata->dev)) {
+			power_supply_unregister(drvdata->battery);
+			drvdata->battery = NULL;
+		}
+
+	}
+}
+
 static void corsair_void_headset_connected(struct corsair_void_drvdata *drvdata)
 {
+	schedule_work(&drvdata->battery_add_work);
 	schedule_delayed_work(&drvdata->delayed_firmware_work, msecs_to_jiffies(100));
 }
 
 static void corsair_void_headset_disconnected(struct corsair_void_drvdata *drvdata)
 {
+	schedule_work(&drvdata->battery_remove_work);
+
 	corsair_void_set_unknown_data(drvdata);
 	corsair_void_set_unknown_batt(drvdata);
 }
@@ -574,21 +620,9 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 	drvdata->battery_desc.properties = corsair_void_battery_props;
 	drvdata->battery_desc.num_properties = ARRAY_SIZE(corsair_void_battery_props);
 	drvdata->battery_desc.get_property = corsair_void_battery_get_property;
-
-	drvdata->battery = devm_power_supply_register(&hid_dev->dev,
-						      &drvdata->battery_desc,
-						      &psy_cfg);
-	if (IS_ERR(drvdata->battery)) {
-		ret = PTR_ERR(drvdata->battery);
-		hid_err(hid_dev, "failed to register battery '%s' (reason: %d)\n",
-			name, ret);
-		goto failed_after_hid_start;
-	}
-
-	ret = power_supply_powers(drvdata->battery, drvdata->dev);
-	if (ret) {
-		goto failed_after_hid_start;
-	}
+	drvdata->battery = NULL;
+	INIT_WORK(&drvdata->battery_remove_work, corsair_void_battery_remove_work_handler);
+	INIT_WORK(&drvdata->battery_add_work, corsair_void_battery_add_work_handler);
 
 	ret = sysfs_create_group(&hid_dev->dev.kobj, &corsair_void_attr_group);
 	if (ret) {
@@ -620,9 +654,15 @@ static void corsair_void_remove(struct hid_device *hid_dev)
 {
 	struct corsair_void_drvdata *drvdata = hid_get_drvdata(hid_dev);
 
+	hid_hw_stop(hid_dev);
+	cancel_work_sync(&drvdata->battery_remove_work);
+	cancel_work_sync(&drvdata->battery_add_work);
+	if (drvdata->battery) {
+		power_supply_unregister(drvdata->battery);
+	}
+
 	cancel_delayed_work_sync(&drvdata->delayed_firmware_work);
 	sysfs_remove_group(&hid_dev->dev.kobj, &corsair_void_attr_group);
-	hid_hw_stop(hid_dev);
 }
 
 static int corsair_void_raw_event(struct hid_device *hid_dev,
