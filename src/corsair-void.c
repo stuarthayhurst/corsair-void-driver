@@ -266,10 +266,11 @@ static int corsair_void_battery_get_property(struct power_supply *psy,
 			break;
 		case POWER_SUPPLY_PROP_MODEL_NAME:
 			char *name = drvdata->hid_dev->name;
-			if (!strncmp(name, "Corsair ", 8))
+			if (!strncmp(name, "Corsair ", 8)) {
 				val->strval = name + 8;
-			else
+			} else {
 				val->strval = name;
+			}
 			break;
 		case POWER_SUPPLY_PROP_MANUFACTURER:
 			val->strval = "Corsair";
