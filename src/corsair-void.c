@@ -138,6 +138,7 @@ struct corsair_void_drvdata {
 	struct power_supply *battery;
 	struct power_supply_desc battery_desc;
 
+	struct delayed_work delayed_status_work;
 	struct delayed_work delayed_firmware_work;
 	struct work_struct battery_remove_work;
 	struct work_struct battery_add_work;
@@ -469,6 +470,18 @@ static int corsair_void_request_status(struct hid_device *hid_dev, int id)
  - Headset connect / disconnect handlers and work handlers
 */
 
+static void corsair_void_status_work_handler(struct work_struct *work)
+{
+	struct corsair_void_drvdata *drvdata;
+	struct delayed_work *delayed_work;
+
+	delayed_work = container_of(work, struct delayed_work, work);
+	drvdata = container_of(delayed_work, struct corsair_void_drvdata, delayed_status_work);
+
+	corsair_void_request_status(drvdata->hid_dev,
+				    CORSAIR_VOID_BATTERY_REPORT_ID);
+}
+
 static void corsair_void_firmware_work_handler(struct work_struct *work)
 {
 	struct corsair_void_drvdata *drvdata;
@@ -633,10 +646,11 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 	/* Any failures after here should go to failed_after_hid_start */
 
 	/* Refresh battery data, in case headset is already connected */
-	corsair_void_request_status(hid_dev, CORSAIR_VOID_BATTERY_REPORT_ID);
+	INIT_DELAYED_WORK(&drvdata->delayed_status_work,
+			  corsair_void_status_work_handler);
+	schedule_delayed_work(&drvdata->delayed_status_work, msecs_to_jiffies(100));
 
-	/* Refresh firmware versions, after a 100ms delay */
-	/* Otherwise, the hardware responds to either the battery or the firmware */
+	/* Refresh firmware versions */
 	INIT_DELAYED_WORK(&drvdata->delayed_firmware_work,
 			  corsair_void_firmware_work_handler);
 	schedule_delayed_work(&drvdata->delayed_firmware_work, msecs_to_jiffies(100));
