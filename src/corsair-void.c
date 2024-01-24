@@ -681,7 +681,7 @@ static int corsair_void_raw_event(struct hid_device *hid_dev,
 		drvdata->raw_receiver_info.battery_status = data[4];
 
 		drvdata->mic_up = FIELD_GET(CORSAIR_VOID_MIC_MASK, data[2]);
-		drvdata->raw_receiver_info.connected = (data[3] == 177) ? 1 : 0;
+		drvdata->raw_receiver_info.connected = !!(data[3] == 177);
 
 		corsair_void_process_receiver(drvdata);
 	} else if (hid_report->id == CORSAIR_VOID_FIRMWARE_REPORT_ID) {
