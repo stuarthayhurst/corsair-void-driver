@@ -296,7 +296,7 @@ static ssize_t corsair_void_report_mic_up(struct device *dev,
 	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
 
 	if (!drvdata->connected) {
-		return -ENODATA;
+		return -ENODEV;
 	}
 
 	return sysfs_emit(buf, "%d\n", drvdata->mic_up);
