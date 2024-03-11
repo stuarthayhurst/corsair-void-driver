@@ -23,6 +23,10 @@
     - [x] `(sysfs) microphone_up: [0 / 1] (read-only)`
     - [x] `(sysfs) send_alert: [0 / 1] (write-only)`
     - [x] `(sysfs) fw_version_[receiver / headset] (read-only)`
+  - [ ] Wired, wireless and surround headset support
+    - Currently, only wireless headsets are properly supported
+    - If you have a spare wired or surround variant, please get in touch
+      - If it's not spare, feel free to hack away at this driver
 
 ## References:
   - [headsetcontrol](https://github.com/Sapd/HeadsetControl/blob/master/src/devices/corsair_void.c)
