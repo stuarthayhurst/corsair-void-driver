@@ -717,6 +717,10 @@ static const struct hid_device_id corsair_void_devices[] = {
 	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x1b29) },
 	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x1b2a) },
 
+	/* Corsair Void Surround */
+	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a30) },
+	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a31) },
+
 	/* Corsair Void Pro Wireless */
 	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a14) },
 	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a16) },
@@ -726,6 +730,11 @@ static const struct hid_device_id corsair_void_devices[] = {
 	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a17) },
 	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a1d) },
 
+	/* Corsair Void Pro Surround */
+	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a18) },
+	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a1e) },
+	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a1f) },
+
 	/* Corsair Void Elite Wireless */
 	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a51) },
 	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a55) },
@@ -734,6 +743,10 @@ static const struct hid_device_id corsair_void_devices[] = {
 	/* Corsair Void Elite USB */
 	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a52) },
 	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a56) },
+
+	/* Corsair Void Elite Surround */
+	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a53) },
+	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a57) },
 
 	{}
 };
