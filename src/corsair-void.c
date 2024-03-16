@@ -77,6 +77,7 @@ INDEX: PROPERTY
 #include <linux/bitops.h>
 #include <linux/hid.h>
 #include <linux/module.h>
+#include <linux/mutex.h>
 #include <linux/power_supply.h>
 #include <linux/usb.h>
 #include <linux/workqueue.h>
@@ -128,6 +129,7 @@ struct corsair_void_drvdata {
 
 	struct power_supply *battery;
 	struct power_supply_desc battery_desc;
+	struct mutex battery_mutex;
 
 	struct delayed_work delayed_status_work;
 	struct delayed_work delayed_firmware_work;
@@ -237,9 +239,11 @@ success:
 
 	/* Decide if battery values changed */
 	if (memcmp(&orig_battery_data, battery_data, battery_struct_size)) {
+		mutex_lock(&drvdata->battery_mutex);
 		if (drvdata->battery) {
 			power_supply_changed(drvdata->battery);
 		}
+		mutex_unlock(&drvdata->battery_mutex);
 	}
 }
 
@@ -483,10 +487,12 @@ static void corsair_void_battery_remove_work_handler(struct work_struct *work)
 	struct corsair_void_drvdata *drvdata;
 
 	drvdata = container_of(work, struct corsair_void_drvdata, battery_remove_work);
+	mutex_lock(&drvdata->battery_mutex);
 	if (drvdata->battery) {
 		power_supply_unregister(drvdata->battery);
 		drvdata->battery = NULL;
 	}
+	mutex_unlock(&drvdata->battery_mutex);
 }
 
 static void corsair_void_battery_add_work_handler(struct work_struct *work)
@@ -495,6 +501,7 @@ static void corsair_void_battery_add_work_handler(struct work_struct *work)
 	struct power_supply_config psy_cfg;
 
 	drvdata = container_of(work, struct corsair_void_drvdata, battery_add_work);
+	mutex_lock(&drvdata->battery_mutex);
 	if (!drvdata->battery) {
 		psy_cfg.drv_data = drvdata;
 		drvdata->battery = power_supply_register(drvdata->dev,
@@ -514,6 +521,7 @@ static void corsair_void_battery_add_work_handler(struct work_struct *work)
 			drvdata->battery = NULL;
 		}
 	}
+	mutex_unlock(&drvdata->battery_mutex);
 }
 
 static void corsair_void_headset_connected(struct corsair_void_drvdata *drvdata)
@@ -613,6 +621,7 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 	drvdata->battery = NULL;
 	INIT_WORK(&drvdata->battery_remove_work, corsair_void_battery_remove_work_handler);
 	INIT_WORK(&drvdata->battery_add_work, corsair_void_battery_add_work_handler);
+	mutex_init(&drvdata->battery_mutex);
 
 	ret = sysfs_create_group(&hid_dev->dev.kobj, &corsair_void_attr_group);
 	if (ret) {
