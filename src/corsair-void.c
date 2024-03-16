@@ -302,31 +302,26 @@ static ssize_t corsair_void_report_mic_up(struct device *dev,
 	return sysfs_emit(buf, "%d\n", drvdata->mic_up);
 }
 
-static ssize_t corsair_void_report_firmware(char* buf, int major, int minor)
+static ssize_t corsair_void_report_firmware(struct device *dev,
+					    struct device_attribute *attr,
+					    char *buf)
 {
+	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
+	int major, minor;
+
+	if (!strcmp(attr->attr.name, "fw_version_receiver")) {
+		major = drvdata->fw_receiver_major;
+		minor = drvdata->fw_receiver_minor;
+	} else {
+		major = drvdata->fw_headset_major;
+		minor = drvdata->fw_headset_minor;
+	}
+
 	if (major == 0 && minor == 0) {
 		return -ENODATA;
 	}
 
 	return sysfs_emit(buf, "%d.%02d\n", major, minor);
-}
-
-static ssize_t corsair_void_report_firmware_receiver(struct device *dev,
-						     struct device_attribute *attr,
-						     char *buf)
-{
-	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
-	return corsair_void_report_firmware(buf, drvdata->fw_receiver_major,
-					    drvdata->fw_receiver_minor);
-}
-
-static ssize_t corsair_void_report_firmware_headset(struct device *dev,
-						    struct device_attribute *attr,
-						    char *buf)
-{
-	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
-	return corsair_void_report_firmware(buf, drvdata->fw_headset_major,
-					    drvdata->fw_headset_minor);
 }
 
 /*
@@ -540,10 +535,8 @@ static void corsair_void_headset_disconnected(struct corsair_void_drvdata *drvda
 */
 
 static DEVICE_ATTR(microphone_up, 0444, corsair_void_report_mic_up, NULL);
-static DEVICE_ATTR(fw_version_receiver, 0444,
-		   corsair_void_report_firmware_receiver, NULL);
-static DEVICE_ATTR(fw_version_headset, 0444,
-		   corsair_void_report_firmware_headset, NULL);
+static DEVICE_ATTR(fw_version_receiver, 0444, corsair_void_report_firmware, NULL);
+static DEVICE_ATTR(fw_version_headset, 0444, corsair_void_report_firmware, NULL);
 
 /* Write-only alert, as it only plays a sound (nothing to report back) */
 static DEVICE_ATTR(send_alert, 0200, NULL, corsair_void_send_alert);
