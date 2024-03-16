@@ -514,13 +514,17 @@ static void corsair_void_battery_add_work_handler(struct work_struct *work)
 				drvdata->battery_desc.name,
 				PTR_ERR(drvdata->battery));
 			drvdata->battery = NULL;
+			goto battery_unlock;
 		}
 
 		if (power_supply_powers(drvdata->battery, drvdata->dev)) {
 			power_supply_unregister(drvdata->battery);
 			drvdata->battery = NULL;
+			goto battery_unlock;
 		}
 	}
+
+battery_unlock:
 	mutex_unlock(&drvdata->battery_mutex);
 }
 
