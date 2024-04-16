@@ -95,7 +95,7 @@ INDEX: PROPERTY
 #define CORSAIR_VOID_STATUS_REQUEST_ID		0xC9
 #define CORSAIR_VOID_NOTIF_REQUEST_ID		0xCA
 #define CORSAIR_VOID_SIDETONE_REQUEST_ID	0xFF
-#define CORSAIR_VOID_BATTERY_REPORT_ID		0x64
+#define CORSAIR_VOID_STATUS_REPORT_ID		0x64
 #define CORSAIR_VOID_FIRMWARE_REPORT_ID		0x66
 
 #define CORSAIR_VOID_MIC_MASK			GENMASK(7, 7)
@@ -442,7 +442,7 @@ static int corsair_void_request_status(struct hid_device *hid_dev, int id)
 	unsigned char send_buf[2];
 	int ret;
 
-	/* Packet format to request data item (battery / firmware) refresh */
+	/* Packet format to request data item (status / firmware) refresh */
 	send_buf[0] = CORSAIR_VOID_STATUS_REQUEST_ID;
 	send_buf[1] = id;
 
@@ -451,7 +451,7 @@ static int corsair_void_request_status(struct hid_device *hid_dev, int id)
 			  send_buf, 2, HID_OUTPUT_REPORT, HID_REQ_SET_REPORT);
 	if (ret < 0) {
 		switch (id) {
-		case CORSAIR_VOID_BATTERY_REPORT_ID:
+		case CORSAIR_VOID_STATUS_REPORT_ID:
 			hid_warn(hid_dev, "failed to request battery (reason: %d)", ret);
 			break;
 		case CORSAIR_VOID_FIRMWARE_REPORT_ID:
@@ -480,7 +480,7 @@ static void corsair_void_status_work_handler(struct work_struct *work)
 	drvdata = container_of(delayed_work, struct corsair_void_drvdata, delayed_status_work);
 
 	corsair_void_request_status(drvdata->hid_dev,
-				    CORSAIR_VOID_BATTERY_REPORT_ID);
+				    CORSAIR_VOID_STATUS_REPORT_ID);
 }
 
 static void corsair_void_firmware_work_handler(struct work_struct *work)
@@ -697,7 +697,7 @@ static int corsair_void_raw_event(struct hid_device *hid_dev,
 	int was_connected = drvdata->connected;
 
 	/* Description of packets are documented at the top of this file */
-	if (hid_report->id == CORSAIR_VOID_BATTERY_REPORT_ID) {
+	if (hid_report->id == CORSAIR_VOID_STATUS_REPORT_ID) {
 		drvdata->mic_up = FIELD_GET(CORSAIR_VOID_MIC_MASK, data[2]);
 		drvdata->connected = !!(data[3] == CORSAIR_VOID_WIRELESS_CONNECTED);
 
