@@ -87,6 +87,11 @@ INDEX: PROPERTY
 
 #include "hid-ids.h"
 
+#define CORSAIR_VOID_DEVICE(id, type)		{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, (id)), \
+						.driver_data = (type) }
+#define CORSAIR_VOID_WIRELESS_DEVICE(id)	CORSAIR_VOID_DEVICE(id, CORSAIR_VOID_WIRELESS)
+#define CORSAIR_VOID_WIRED_DEVICE(id)		CORSAIR_VOID_DEVICE(id, CORSAIR_VOID_WIRED)
+
 #define CORSAIR_VOID_STATUS_REQUEST_ID		0xC9
 #define CORSAIR_VOID_NOTIF_REQUEST_ID		0xCA
 #define CORSAIR_VOID_SIDETONE_REQUEST_ID	0xFF
@@ -97,6 +102,11 @@ INDEX: PROPERTY
 #define CORSAIR_VOID_CAPACITY_MASK		GENMASK(6, 0)
 
 #define CORSAIR_VOID_WIRELESS_CONNECTED		177
+
+enum {
+	CORSAIR_VOID_WIRELESS,
+	CORSAIR_VOID_WIRED,
+};
 
 static enum power_supply_property corsair_void_battery_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
@@ -120,6 +130,7 @@ struct corsair_void_drvdata {
 	struct device *dev;
 
 	char *name;
+	int is_wired;
 
 	struct corsair_void_battery_data battery_data;
 	int mic_up;
@@ -594,6 +605,7 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 
 	drvdata->dev = &hid_dev->dev;
 	drvdata->hid_dev = hid_dev;
+	drvdata->is_wired = hid_id->driver_data == CORSAIR_VOID_WIRED ? 1 : 0;
 
 	/* Set initial values for no headset attached */
 	/* If a headset is attached, it'll be prompted later */
@@ -601,7 +613,7 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 	corsair_void_set_unknown_batt(drvdata);
 
 	/* Set receiver firmware version, as set_unknown_data doesn't handle it */
-	/* Receiver version won't be 0 after init during the driver's lifetime */
+	/* Receiver version won't be reset after init */
 	drvdata->fw_receiver_major = 0;
 	drvdata->fw_receiver_minor = 0;
 
@@ -713,48 +725,48 @@ static int corsair_void_raw_event(struct hid_device *hid_dev,
 
 static const struct hid_device_id corsair_void_devices[] = {
 	/* Corsair Void Wireless */
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a0c) },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a2b) },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x1b23) },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x1b25) },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x1b27) },
+	CORSAIR_VOID_WIRELESS_DEVICE(0x0a0c),
+	CORSAIR_VOID_WIRELESS_DEVICE(0x0a2b),
+	CORSAIR_VOID_WIRELESS_DEVICE(0x1b23),
+	CORSAIR_VOID_WIRELESS_DEVICE(0x1b25),
+	CORSAIR_VOID_WIRELESS_DEVICE(0x1b27),
 
 	/* Corsair Void USB */
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a0f) },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x1b1c) },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x1b29) },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x1b2a) },
+	CORSAIR_VOID_WIRED_DEVICE(0x0a0f),
+	CORSAIR_VOID_WIRED_DEVICE(0x1b1c),
+	CORSAIR_VOID_WIRED_DEVICE(0x1b29),
+	CORSAIR_VOID_WIRED_DEVICE(0x1b2a),
 
 	/* Corsair Void Surround */
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a30) },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a31) },
+	CORSAIR_VOID_WIRED_DEVICE(0x0a30),
+	CORSAIR_VOID_WIRED_DEVICE(0x0a31),
 
 	/* Corsair Void Pro Wireless */
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a14) },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a16) },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a1a) },
+	CORSAIR_VOID_WIRELESS_DEVICE(0x0a14),
+	CORSAIR_VOID_WIRELESS_DEVICE(0x0a16),
+	CORSAIR_VOID_WIRELESS_DEVICE(0x0a1a),
 
 	/* Corsair Void Pro USB */
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a17) },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a1d) },
+	CORSAIR_VOID_WIRED_DEVICE(0x0a17),
+	CORSAIR_VOID_WIRED_DEVICE(0x0a1d),
 
 	/* Corsair Void Pro Surround */
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a18) },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a1e) },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a1f) },
+	CORSAIR_VOID_WIRED_DEVICE(0x0a18),
+	CORSAIR_VOID_WIRED_DEVICE(0x0a1e),
+	CORSAIR_VOID_WIRED_DEVICE(0x0a1f),
 
 	/* Corsair Void Elite Wireless */
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a51) },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a55) },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a75) },
+	CORSAIR_VOID_WIRELESS_DEVICE(0x0a51),
+	CORSAIR_VOID_WIRELESS_DEVICE(0x0a55),
+	CORSAIR_VOID_WIRELESS_DEVICE(0x0a75),
 
 	/* Corsair Void Elite USB */
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a52) },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a56) },
+	CORSAIR_VOID_WIRED_DEVICE(0x0a52),
+	CORSAIR_VOID_WIRED_DEVICE(0x0a56),
 
 	/* Corsair Void Elite Surround */
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a53) },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, 0x0a57) },
+	CORSAIR_VOID_WIRED_DEVICE(0x0a53),
+	CORSAIR_VOID_WIRED_DEVICE(0x0a57),
 
 	{}
 };
