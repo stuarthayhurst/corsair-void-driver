@@ -96,6 +96,8 @@ INDEX: PROPERTY
 #define CORSAIR_VOID_MIC_MASK			GENMASK(7, 7)
 #define CORSAIR_VOID_CAPACITY_MASK		GENMASK(6, 0)
 
+#define CORSAIR_VOID_WIRELESS_CONNECTED		177
+
 static enum power_supply_property corsair_void_battery_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
 	POWER_SUPPLY_PROP_PRESENT,
@@ -188,7 +190,7 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata,
 	orig_battery_data = *battery_data;
 
 	/* Check connection and battery status to set battery data */
-	if (raw_connection_status != 177) {
+	if (raw_connection_status != CORSAIR_VOID_WIRELESS_CONNECTED) {
 		/* Headset not connected */
 		goto unknown_battery;
 	} else if (raw_battery_status == 0) {
@@ -685,7 +687,7 @@ static int corsair_void_raw_event(struct hid_device *hid_dev,
 	/* Description of packets are documented at the top of this file */
 	if (hid_report->id == CORSAIR_VOID_BATTERY_REPORT_ID) {
 		drvdata->mic_up = FIELD_GET(CORSAIR_VOID_MIC_MASK, data[2]);
-		drvdata->connected = !!(data[3] == 177);
+		drvdata->connected = !!(data[3] == CORSAIR_VOID_WIRELESS_CONNECTED);
 
 		corsair_void_process_receiver(drvdata,
 					      FIELD_GET(CORSAIR_VOID_CAPACITY_MASK, data[2]),
