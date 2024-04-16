@@ -699,7 +699,7 @@ static int corsair_void_raw_event(struct hid_device *hid_dev,
 	/* Description of packets are documented at the top of this file */
 	if (hid_report->id == CORSAIR_VOID_STATUS_REPORT_ID) {
 		drvdata->mic_up = FIELD_GET(CORSAIR_VOID_MIC_MASK, data[2]);
-		drvdata->connected = !!(data[3] == CORSAIR_VOID_WIRELESS_CONNECTED) ||
+		drvdata->connected = (data[3] == CORSAIR_VOID_WIRELESS_CONNECTED) ||
 				     drvdata->is_wired;
 
 		corsair_void_process_receiver(drvdata,
