@@ -159,6 +159,10 @@ static void corsair_void_set_wireless_status(struct corsair_void_drvdata *drvdat
 {
 	struct usb_interface *usb_if = to_usb_interface(drvdata->dev->parent);
 
+	if (drvdata->is_wired) {
+		return;
+	}
+
 	usb_set_wireless_status(usb_if, drvdata->connected ?
 					USB_WIRELESS_STATUS_CONNECTED :
 					USB_WIRELESS_STATUS_DISCONNECTED);
@@ -202,7 +206,7 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata,
 
 	/* Check connection and battery status to set battery data */
 	if (raw_connection_status != CORSAIR_VOID_WIRELESS_CONNECTED) {
-		/* Headset not connected */
+		/* Headset not connected, or it's wired */
 		goto unknown_battery;
 	} else if (raw_battery_status == 0) {
 		/* Battery information unavailable */
@@ -654,7 +658,7 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 
 	/* Any failures after here should go to failed_after_hid_start */
 
-	/* Refresh battery data, in case headset is already connected */
+	/* Refresh battery data, in case wireless headset is already connected */
 	INIT_DELAYED_WORK(&drvdata->delayed_status_work,
 			  corsair_void_status_work_handler);
 	schedule_delayed_work(&drvdata->delayed_status_work, msecs_to_jiffies(100));
