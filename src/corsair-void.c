@@ -179,9 +179,10 @@ static void corsair_void_set_unknown_batt(struct corsair_void_drvdata *drvdata)
 	battery_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
 }
 
-static void corsair_void_set_unknown_data(struct corsair_void_drvdata *drvdata)
+/* Reset data that may change between wireless connections */
+static void corsair_void_set_unknown_wireless_data(struct corsair_void_drvdata *drvdata)
 {
-	/* Only 0 out headset firmware, receiver version is always be known */
+	/* Only 0 out headset, receiver is always known if relevant */
 	drvdata->fw_headset_major = 0;
 	drvdata->fw_headset_minor = 0;
 
@@ -555,7 +556,7 @@ static void corsair_void_headset_disconnected(struct corsair_void_drvdata *drvda
 {
 	schedule_work(&drvdata->battery_remove_work);
 
-	corsair_void_set_unknown_data(drvdata);
+	corsair_void_set_unknown_wireless_data(drvdata);
 	corsair_void_set_unknown_batt(drvdata);
 }
 
@@ -611,13 +612,13 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 	drvdata->hid_dev = hid_dev;
 	drvdata->is_wired = hid_id->driver_data == CORSAIR_VOID_WIRED ? 1 : 0;
 
-	/* Set initial values for no headset attached */
+	/* Set initial values for no wireless headset attached */
 	/* If a headset is attached, it'll be prompted later */
-	corsair_void_set_unknown_data(drvdata);
+	corsair_void_set_unknown_wireless_data(drvdata);
 	corsair_void_set_unknown_batt(drvdata);
 
-	/* Set receiver firmware version, as set_unknown_data doesn't handle it */
 	/* Receiver version won't be reset after init */
+	/* Headset version already set via set_unknown_wireless_data */
 	drvdata->fw_receiver_major = 0;
 	drvdata->fw_receiver_minor = 0;
 
