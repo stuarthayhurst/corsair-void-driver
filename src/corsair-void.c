@@ -712,8 +712,8 @@ static int corsair_void_raw_event(struct hid_device *hid_dev,
 		drvdata->fw_headset_minor = data[4];
 	}
 
-	/* Handle headset connect / disconnect */
-	if (was_connected != drvdata->connected) {
+	/* Handle wireless headset connect / disconnect */
+	if ((was_connected != drvdata->connected) && !drvdata->is_wired) {
 		if (drvdata->connected) {
 			corsair_void_headset_connected(drvdata);
 		} else {
