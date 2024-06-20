@@ -1,76 +1,71 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * HID driver for Corsair Void headsets
- * Report issues to https://github.com/stuarthayhurst/corsair-void-driver/issues
-
- * Copyright (c) 2023-2024 Stuart Hayhurst
-*/
+ *  HID driver for Corsair Void headsets
+ *
+ *  Copyright (C) 2023-2024 Stuart Hayhurst
+ */
 
 /* ------------------------------------------------------------------------- */
 /* Receiver report information: (ID 100)                                     */
 /* ------------------------------------------------------------------------- */
 /*
- - When queried, the receiver reponds with 5 bytes to describe the battery
-  - The power button, mute button and moving the mic also trigger this report
- - This includes power button + mic + connection + battery status and capacity
- - The information below may not be perfect, it's been gathered through guesses
-
-INDEX: PROPERTY
- 0: REPORT ID
-  - 100 for the battery packet
-
- 1: POWER BUTTON + (?)
-  - Largest bit is 1 when power button pressed
-
- 2: BATTERY CAPACITY + MIC STATUS
-  - Battery capacity:
-   - Seems to report ~54 higher than reality when charging
-   - Seems to be capped at 100
-  - Microphone status:
-   - Largest bit is set to 1 when the mic is physically up
-   - No bits change when the mic is muted, only when physically moved
-   - This report is sent every time the mic is moved, no polling required
-
- 3: CONNECTION STATUS
-  - 38: Initialising
-  - 49: Lost connection
-  - 51: Disconnected, searching
-  - 52: Disconnected, not searching
-  - 177: Normal
-
- 4: BATTERY STATUS
-  - 0: Disconnected
-  - 1: Normal
-  - 2: Low
-  - 3: Critical - sent during shutdown
-  - 4: Fully charged
-  - 5: Charging
-*/
+ * When queried, the receiver reponds with 5 bytes to describe the battery
+ *   The power button, mute button and moving the mic also trigger this report
+ * This includes power button + mic + connection + battery status and capacity
+ * The information below may not be perfect, it's been gathered through guesses
+ *
+ * 0: REPORT ID
+ *  100 for the battery packet
+ *
+ * 1: POWER BUTTON + (?)
+ *  Largest bit is 1 when power button pressed
+ *
+ * 2: BATTERY CAPACITY + MIC STATUS
+ *  Battery capacity:
+ *    Seems to report ~54 higher than reality when charging
+ *    Capped at 100, charging or not
+ *  Microphone status:
+ *    Largest bit is set to 1 when the mic is physically up
+ *    No bits change when the mic is muted, only when physically moved
+ *    This report is sent every time the mic is moved, no polling required
+ *
+ * 3: CONNECTION STATUS
+ *  38: Initialising
+ *  49: Lost connection
+ *  51: Disconnected, searching
+ *  52: Disconnected, not searching
+ *  177: Normal
+ *
+ * 4: BATTERY STATUS
+ *  0: Disconnected
+ *  1: Normal
+ *  2: Low
+ *  3: Critical - sent during shutdown
+ *  4: Fully charged
+ *  5: Charging
+ */
 /* ------------------------------------------------------------------------- */
 
 /* ------------------------------------------------------------------------- */
 /* Receiver report information: (ID 102)                                     */
 /* ------------------------------------------------------------------------- */
 /*
- - When queried, the recevier responds with 4 bytes to describe the firmware
- - The first 2 bytes are for the receiver, the second 2 are the headset
- - The headset firmware's version may be 0 if it's disconnected
-
-INDEX: PROPERTY
- 0: Recevier firmware major version
-  - Major version of the receiver's firmware
-
- 1: Recevier firmware minor version
-  - Minor version of the receiver's firmware
-
- 2: Headset firmware major version
-  - Major version of the headset's firmware
-  - This may be 0 if no headset is connected (version dependent)
-
- 3: Headset firmware minor version
-  - Minor version of the headset's firmware
-  - This may be 0 if no headset is connected (version dependent)
-*/
+ * When queried, the recevier responds with 4 bytes to describe the firmware
+ * The first 2 bytes are for the receiver, the second 2 are the headset
+ * The headset firmware version will be 0 if no headset is connected
+ *
+ * 0: Recevier firmware major version
+ *  Major version of the receiver's firmware
+ *
+ * 1: Recevier firmware minor version
+ *  Minor version of the receiver's firmware
+ *
+ * 2: Headset firmware major version
+ *  Major version of the headset's firmware
+ *
+ * 3: Headset firmware minor version
+ *  Minor version of the headset's firmware
+ */
 /* ------------------------------------------------------------------------- */
 
 #include <linux/bitfield.h>
@@ -151,7 +146,7 @@ struct corsair_void_drvdata {
 };
 
 /*
- - Functions to process receiver data
+ * Functions to process receiver data
 */
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
@@ -266,7 +261,7 @@ success:
 }
 
 /*
- - Functions to report stored data
+ * Functions to report stored data
 */
 
 static int corsair_void_battery_get_property(struct power_supply *psy,
@@ -347,7 +342,7 @@ static ssize_t corsair_void_report_firmware(struct device *dev,
 }
 
 /*
- - Functions to send data to headset
+ * Functions to send data to headset
 */
 
 static ssize_t corsair_void_send_alert(struct device *dev,
@@ -473,7 +468,7 @@ static int corsair_void_request_status(struct hid_device *hid_dev, int id)
 }
 
 /*
- - Headset connect / disconnect handlers and work handlers
+ * Headset connect / disconnect handlers and work handlers
 */
 
 static void corsair_void_status_work_handler(struct work_struct *work)
@@ -561,7 +556,7 @@ static void corsair_void_headset_disconnected(struct corsair_void_drvdata *drvda
 }
 
 /*
- - Driver setup, probing, HID event handling
+ * Driver setup, probing and HID event handling
 */
 
 static DEVICE_ATTR(microphone_up, 0444, corsair_void_report_mic_up, NULL);
