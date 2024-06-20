@@ -352,7 +352,7 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
 	struct hid_device *hid_dev = drvdata->hid_dev;
 	unsigned char alert_id;
-	unsigned char send_buf[3];
+	unsigned char *send_buf;
 	int ret;
 
 	if (!drvdata->connected) {
@@ -368,6 +368,11 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 		return -EINVAL;
 	}
 
+	send_buf = kzalloc(3, GFP_KERNEL);
+	if (!send_buf) {
+		return -ENOMEM;
+	}
+
 	/* Packet format to send alert with ID alert_id */
 	send_buf[0] = CORSAIR_VOID_NOTIF_REQUEST_ID;
 	send_buf[1] = 0x02;
@@ -377,10 +382,12 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 			  send_buf, 3, HID_OUTPUT_REPORT, HID_REQ_SET_REPORT);
 	if (ret < 0) {
 		hid_warn(hid_dev, "failed to send alert request (reason: %d)", ret);
-		return ret;
+	} else {
+		ret = count;
 	}
 
-	return count;
+	kfree(send_buf);
+	return ret;
 }
 
 static ssize_t corsair_void_send_sidetone(struct device *dev,
