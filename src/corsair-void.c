@@ -413,7 +413,7 @@ static ssize_t corsair_void_send_sidetone(struct device *dev,
 		return -EINVAL;
 	}
 
-	send_buf = kzalloc(64, GFP_KERNEL);
+	send_buf = kzalloc(12, GFP_KERNEL);
 	if (!send_buf) {
 		return -ENOMEM;
 	}
@@ -433,7 +433,7 @@ static ssize_t corsair_void_send_sidetone(struct device *dev,
 	send_buf[11] = sidetone + 200;
 
 	ret = hid_hw_raw_request(hid_dev, CORSAIR_VOID_SIDETONE_REQUEST_ID,
-				 send_buf, 64, HID_FEATURE_REPORT, HID_REQ_SET_REPORT);
+				 send_buf, 12, HID_FEATURE_REPORT, HID_REQ_SET_REPORT);
 	if (ret < 0) {
 		hid_warn(hid_dev, "failed to send sidetone (reason: %d)", ret);
 	} else {
