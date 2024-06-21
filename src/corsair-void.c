@@ -112,7 +112,7 @@ static enum power_supply_property corsair_void_battery_props[] = {
 
 struct corsair_void_battery_data {
 	int status;
-	int present;
+	bool present;
 	int capacity;
 	int capacity_level;
 };
@@ -122,11 +122,11 @@ struct corsair_void_drvdata {
 	struct device *dev;
 
 	char *name;
-	int is_wired;
+	bool is_wired;
 
 	struct corsair_void_battery_data battery_data;
-	int mic_up;
-	int connected;
+	bool mic_up;
+	bool connected;
 	int fw_receiver_major;
 	int fw_receiver_minor;
 	int fw_headset_major;
@@ -163,7 +163,7 @@ static void corsair_void_set_unknown_batt(struct corsair_void_drvdata *drvdata)
 	struct corsair_void_battery_data *battery_data = &drvdata->battery_data;
 
 	battery_data->status = POWER_SUPPLY_STATUS_UNKNOWN;
-	battery_data->present = 0;
+	battery_data->present = false;
 	battery_data->capacity = 0;
 	battery_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
 }
@@ -175,8 +175,8 @@ static void corsair_void_set_unknown_wireless_data(struct corsair_void_drvdata *
 	drvdata->fw_headset_major = 0;
 	drvdata->fw_headset_minor = 0;
 
-	drvdata->connected = 0;
-	drvdata->mic_up = 0;
+	drvdata->connected = false;
+	drvdata->mic_up = false;
 
 	corsair_void_set_wireless_status(drvdata);
 }
@@ -202,7 +202,7 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata,
 		goto unknown_battery;
 
 	/* Battery must be connected then */
-	battery_data->present = 1;
+	battery_data->present = true;
 	battery_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_NORMAL;
 
 	/* Set battery status */
@@ -601,7 +601,7 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 
 	drvdata->dev = &hid_dev->dev;
 	drvdata->hid_dev = hid_dev;
-	drvdata->is_wired = hid_id->driver_data == CORSAIR_VOID_WIRED ? 1 : 0;
+	drvdata->is_wired = hid_id->driver_data == CORSAIR_VOID_WIRED;
 
 	/* Set initial values for no wireless headset attached */
 	/* If a headset is attached, it'll be prompted later */
@@ -691,7 +691,7 @@ static int corsair_void_raw_event(struct hid_device *hid_dev,
 				  u8 *data, int size)
 {
 	struct corsair_void_drvdata *drvdata = hid_get_drvdata(hid_dev);
-	int was_connected = drvdata->connected;
+	bool was_connected = drvdata->connected;
 
 	/* Description of packets are documented at the top of this file */
 	if (hid_report->id == CORSAIR_VOID_STATUS_REPORT_ID) {
