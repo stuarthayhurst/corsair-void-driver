@@ -150,9 +150,8 @@ static void corsair_void_set_wireless_status(struct corsair_void_drvdata *drvdat
 {
 	struct usb_interface *usb_if = to_usb_interface(drvdata->dev->parent);
 
-	if (drvdata->is_wired) {
+	if (drvdata->is_wired)
 		return;
-	}
 
 	usb_set_wireless_status(usb_if, drvdata->connected ?
 					USB_WIRELESS_STATUS_CONNECTED :
@@ -241,7 +240,7 @@ unknown_battery:
 	corsair_void_set_unknown_batt(drvdata);
 success:
 
-	/* Decide if battery values changed */
+	/* Inform power supply if battery values changed */
 	if (memcmp(&orig_battery_data, battery_data, battery_struct_size)) {
 		mutex_lock(&drvdata->battery_mutex);
 		if (drvdata->battery) {
@@ -260,19 +259,16 @@ static int corsair_void_battery_get_property(struct power_supply *psy,
 					     union power_supply_propval *val)
 {
 	struct corsair_void_drvdata *drvdata = power_supply_get_drvdata(psy);
-	int ret = 0;
 
 	switch (prop) {
 		case POWER_SUPPLY_PROP_SCOPE:
 			val->intval = POWER_SUPPLY_SCOPE_DEVICE;
 			break;
 		case POWER_SUPPLY_PROP_MODEL_NAME:
-			char *name = drvdata->hid_dev->name;
-			if (!strncmp(name, "Corsair ", 8)) {
-				val->strval = name + 8;
-			} else {
-				val->strval = name;
-			}
+			if (!strncmp(drvdata->hid_dev->name, "Corsair ", 8))
+				val->strval = drvdata->hid_dev->name + 8;
+			else
+				val->strval = drvdata->hid_dev->name;
 			break;
 		case POWER_SUPPLY_PROP_MANUFACTURER:
 			val->strval = "Corsair";
@@ -290,11 +286,10 @@ static int corsair_void_battery_get_property(struct power_supply *psy,
 			val->intval = drvdata->battery_data.capacity_level;
 			break;
 		default:
-			ret = -EINVAL;
-			break;
+			return -EINVAL;
 	}
 
-	return ret;
+	return 0;
 }
 
 static ssize_t corsair_void_report_mic_up(struct device *dev,
@@ -303,9 +298,8 @@ static ssize_t corsair_void_report_mic_up(struct device *dev,
 {
 	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
 
-	if (!drvdata->connected) {
+	if (!drvdata->connected)
 		return -ENODEV;
-	}
 
 	return sysfs_emit(buf, "%d\n", drvdata->mic_up);
 }
@@ -325,9 +319,8 @@ static ssize_t corsair_void_report_firmware(struct device *dev,
 		minor = drvdata->fw_headset_minor;
 	}
 
-	if (major == 0 && minor == 0) {
+	if (major == 0 && minor == 0)
 		return -ENODATA;
-	}
 
 	return sysfs_emit(buf, "%d.%02d\n", major, minor);
 }
@@ -346,23 +339,19 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 	unsigned char *send_buf;
 	int ret;
 
-	if (!drvdata->connected) {
+	if (!drvdata->connected)
 		return -ENODEV;
-	}
 
-	if (kstrtou8(buf, 10, &alert_id)) {
+	if (kstrtou8(buf, 10, &alert_id))
 		return -EINVAL;
-	}
 
 	/* Only accept 0 or 1 for alert ID */
-	if (alert_id >= 2) {
+	if (alert_id >= 2)
 		return -EINVAL;
-	}
 
 	send_buf = kzalloc(3, GFP_KERNEL);
-	if (!send_buf) {
+	if (!send_buf)
 		return -ENOMEM;
-	}
 
 	/* Packet format to send alert with ID alert_id */
 	send_buf[0] = CORSAIR_VOID_NOTIF_REQUEST_ID;
@@ -371,11 +360,10 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 
 	ret = hid_hw_raw_request(hid_dev, CORSAIR_VOID_NOTIF_REQUEST_ID,
 			  send_buf, 3, HID_OUTPUT_REPORT, HID_REQ_SET_REPORT);
-	if (ret < 0) {
+	if (ret < 0)
 		hid_warn(hid_dev, "failed to send alert request (reason: %d)", ret);
-	} else {
+	else
 		ret = count;
-	}
 
 	kfree(send_buf);
 	return ret;
@@ -391,23 +379,19 @@ static ssize_t corsair_void_send_sidetone(struct device *dev,
 	unsigned char *send_buf;
 	int ret;
 
-	if (!drvdata->connected) {
+	if (!drvdata->connected)
 		return -ENODEV;
-	}
 
-	if (kstrtou8(buf, 10, &sidetone)) {
+	if (kstrtou8(buf, 10, &sidetone))
 		return -EINVAL;
-	}
 
 	/* sidetone must be between 0 and 55 inclusive */
-	if (sidetone > 55) {
+	if (sidetone > 55)
 		return -EINVAL;
-	}
 
 	send_buf = kzalloc(12, GFP_KERNEL);
-	if (!send_buf) {
+	if (!send_buf)
 		return -ENOMEM;
-	}
 
 	/* Packet format to set sidetone */
 	send_buf[0] = CORSAIR_VOID_SIDETONE_REQUEST_ID;
@@ -425,11 +409,10 @@ static ssize_t corsair_void_send_sidetone(struct device *dev,
 
 	ret = hid_hw_raw_request(hid_dev, CORSAIR_VOID_SIDETONE_REQUEST_ID,
 				 send_buf, 12, HID_FEATURE_REPORT, HID_REQ_SET_REPORT);
-	if (ret < 0) {
+	if (ret < 0)
 		hid_warn(hid_dev, "failed to send sidetone (reason: %d)", ret);
-	} else {
+	else
 		ret = count;
-	}
 
 	kfree(send_buf);
 	return ret;
@@ -441,9 +424,8 @@ static int corsair_void_request_status(struct hid_device *hid_dev, int id)
 	int ret;
 
 	send_buf = kzalloc(12, GFP_KERNEL);
-	if (!send_buf) {
+	if (!send_buf)
 		return -ENOMEM;
-	}
 
 	/* Packet format to request data item (status / firmware) refresh */
 	send_buf[0] = CORSAIR_VOID_STATUS_REQUEST_ID;
@@ -595,15 +577,14 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 	char *name;
 	int name_length;
 
-	if (!hid_is_usb(hid_dev)) {
+	if (!hid_is_usb(hid_dev))
 		return -EINVAL;
-	}
 
 	drvdata = devm_kzalloc(&hid_dev->dev, sizeof(struct corsair_void_drvdata),
 			       GFP_KERNEL);
-	if (!drvdata) {
+	if (!drvdata)
 		return -ENOMEM;
-	}
+
 	hid_set_drvdata(hid_dev, drvdata);
 	psy_cfg.drv_data = drvdata;
 	dev_set_drvdata(&hid_dev->dev, drvdata);
@@ -630,9 +611,8 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 
 	name_length = snprintf(NULL, 0, "corsair-void-%d-battery", hid_dev->id);
 	name = devm_kzalloc(drvdata->dev, name_length + 1, GFP_KERNEL);
-	if (!name) {
+	if (!name)
 		return -ENOMEM;
-	}
 	snprintf(name, name_length + 1, "corsair-void-%d-battery", hid_dev->id);
 
 	drvdata->battery_desc.name = name;
@@ -647,9 +627,8 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 	mutex_init(&drvdata->battery_mutex);
 
 	ret = sysfs_create_group(&hid_dev->dev.kobj, &corsair_void_attr_group);
-	if (ret) {
+	if (ret)
 		return ret;
-	}
 
 	ret = hid_hw_start(hid_dev, HID_CONNECT_DEFAULT);
 	if (ret) {
@@ -686,9 +665,8 @@ static void corsair_void_remove(struct hid_device *hid_dev)
 	hid_hw_stop(hid_dev);
 	cancel_work_sync(&drvdata->battery_remove_work);
 	cancel_work_sync(&drvdata->battery_add_work);
-	if (drvdata->battery) {
+	if (drvdata->battery)
 		power_supply_unregister(drvdata->battery);
-	}
 
 	cancel_delayed_work_sync(&drvdata->delayed_firmware_work);
 	sysfs_remove_group(&hid_dev->dev.kobj, &corsair_void_attr_group);
@@ -719,11 +697,10 @@ static int corsair_void_raw_event(struct hid_device *hid_dev,
 
 	/* Handle wireless headset connect / disconnect */
 	if ((was_connected != drvdata->connected) && !drvdata->is_wired) {
-		if (drvdata->connected) {
+		if (drvdata->connected)
 			corsair_void_headset_connected(drvdata);
-		} else {
+		else
 			corsair_void_headset_disconnected(drvdata);
-		}
 	}
 
 	return 0;
