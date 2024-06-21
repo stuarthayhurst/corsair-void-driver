@@ -3,7 +3,7 @@
     - Includes the Corsair Void Pro / Elite / RGB headsets
     - This is experimental, expect issues
   - Requires kernel headers to be installed
-  - I'll eventually upstream this driver, but I'd rather get it feature-complete and stable first
+  - Kernels before 6.4 are only supported up to tag `v0.1`
 
 ## Build system
   - `make`: Build the module
