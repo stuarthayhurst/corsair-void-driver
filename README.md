@@ -24,7 +24,7 @@
     - [x] `(sysfs) send_alert: [0 / 1] (write-only)`
     - [x] `(sysfs) fw_version_[receiver / headset] (read-only)`
   - [ ] Wired, wireless and surround headset support
-    - Currently, only wireless headsets are properly supported
+    - Currently, only wireless headsets are properly tested
     - If you have a spare wired or surround variant, please get in touch
       - If it's not spare, feel free to hack away at this driver
 
