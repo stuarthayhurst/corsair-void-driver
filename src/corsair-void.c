@@ -5,9 +5,9 @@
  *  Copyright (C) 2023-2024 Stuart Hayhurst
  */
 
-/* ------------------------------------------------------------------------- */
-/* Receiver report information: (ID 100)                                     */
-/* ------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* Receiver report information: (ID 100)                                      */
+/* -------------------------------------------------------------------------- */
 /*
  * When queried, the receiver reponds with 5 bytes to describe the battery
  *   The power button, mute button and moving the mic also trigger this report
@@ -44,11 +44,11 @@
  *  4: Fully charged
  *  5: Charging
  */
-/* ------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
 
-/* ------------------------------------------------------------------------- */
-/* Receiver report information: (ID 102)                                     */
-/* ------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* Receiver report information: (ID 102)                                      */
+/* -------------------------------------------------------------------------- */
 /*
  * When queried, the recevier responds with 4 bytes to describe the firmware
  * The first 2 bytes are for the receiver, the second 2 are the headset
@@ -66,7 +66,7 @@
  * 3: Headset firmware minor version
  *  Minor version of the headset's firmware
  */
-/* ------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
 
 #include <linux/bitfield.h>
 #include <linux/bitops.h>
@@ -81,8 +81,8 @@
 
 #define CORSAIR_VOID_DEVICE(id, type)		{ HID_USB_DEVICE(USB_VENDOR_ID_CORSAIR, (id)), \
 						.driver_data = (type) }
-#define CORSAIR_VOID_WIRELESS_DEVICE(id)	CORSAIR_VOID_DEVICE(id, CORSAIR_VOID_WIRELESS)
-#define CORSAIR_VOID_WIRED_DEVICE(id)		CORSAIR_VOID_DEVICE(id, CORSAIR_VOID_WIRED)
+#define CORSAIR_VOID_WIRELESS_DEVICE(id)	CORSAIR_VOID_DEVICE((id), CORSAIR_VOID_WIRELESS)
+#define CORSAIR_VOID_WIRED_DEVICE(id)		CORSAIR_VOID_DEVICE((id), CORSAIR_VOID_WIRED)
 
 #define CORSAIR_VOID_STATUS_REQUEST_ID		0xC9
 #define CORSAIR_VOID_NOTIF_REQUEST_ID		0xCA
@@ -182,7 +182,8 @@ static void corsair_void_set_unknown_wireless_data(struct corsair_void_drvdata *
 }
 
 static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata,
-					  int raw_battery_capacity, int raw_connection_status,
+					  int raw_battery_capacity,
+					  int raw_connection_status,
 					  int raw_battery_status)
 {
 	struct corsair_void_battery_data *battery_data = &drvdata->battery_data;
@@ -192,47 +193,44 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata,
 	/* Save initial battery data, to compare later */
 	orig_battery_data = *battery_data;
 
-	/* Check connection and battery status to set battery data */
-	if (raw_connection_status != CORSAIR_VOID_WIRELESS_CONNECTED) {
-		/* Headset not connected, or it's wired */
+	/* Headset not connected, or it's wired */
+	if (raw_connection_status != CORSAIR_VOID_WIRELESS_CONNECTED)
 		goto unknown_battery;
-	} else if (raw_battery_status == 0) {
-		/* Battery information unavailable */
+
+	/* Battery information unavailable */
+	if (raw_battery_status == 0)
 		goto unknown_battery;
-	} else {
-		/* Battery connected */
-		battery_data->present = 1;
-		battery_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_NORMAL;
 
-		/* Set battery status */
-		switch (raw_battery_status) {
-		case 1:
-		case 2:
-		case 3: /* Battery normal / low / critical */
-			battery_data->status = POWER_SUPPLY_STATUS_DISCHARGING;
-			if (raw_battery_status == 2) {
-				battery_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_LOW;
-			} else if (raw_battery_status == 3) {
-				battery_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_CRITICAL;
-			}
+	/* Battery must be connected then */
+	battery_data->present = 1;
+	battery_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_NORMAL;
 
-			break;
-		case 4: /* Battery fully charged */
-			battery_data->status = POWER_SUPPLY_STATUS_FULL;
-			break;
-		case 5: /* Battery charging */
-			battery_data->status = POWER_SUPPLY_STATUS_CHARGING;
-			break;
-		default:
-			hid_warn(drvdata->hid_dev, "unknown battery status '%d'",
-				 raw_battery_status);
-			goto unknown_battery;
-			break;
-		}
+	/* Set battery status */
+	switch (raw_battery_status) {
+	case 1:
+	case 2:
+	case 3: /* Battery normal / low / critical */
+		battery_data->status = POWER_SUPPLY_STATUS_DISCHARGING;
+		if (raw_battery_status == 2)
+			battery_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_LOW;
+		else if (raw_battery_status == 3)
+			battery_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_CRITICAL;
 
-		battery_data->capacity = raw_battery_capacity;
+		break;
+	case 4: /* Battery fully charged */
+		battery_data->status = POWER_SUPPLY_STATUS_FULL;
+		break;
+	case 5: /* Battery charging */
+		battery_data->status = POWER_SUPPLY_STATUS_CHARGING;
+		break;
+	default:
+		hid_warn(drvdata->hid_dev, "unknown battery status '%d'",
+			 raw_battery_status);
+		goto unknown_battery;
+		break;
 	}
 
+	battery_data->capacity = raw_battery_capacity;
 	corsair_void_set_wireless_status(drvdata);
 
 	goto success;
@@ -360,10 +358,12 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 
 	ret = hid_hw_raw_request(hid_dev, CORSAIR_VOID_NOTIF_REQUEST_ID,
 			  send_buf, 3, HID_OUTPUT_REPORT, HID_REQ_SET_REPORT);
-	if (ret < 0)
-		hid_warn(hid_dev, "failed to send alert request (reason: %d)", ret);
-	else
+	if (ret < 0) {
+		hid_warn(hid_dev, "failed to send alert request (reason: %d)",
+			 ret);
+	} else {
 		ret = count;
+	}
 
 	kfree(send_buf);
 	return ret;
@@ -408,7 +408,8 @@ static ssize_t corsair_void_send_sidetone(struct device *dev,
 	send_buf[11] = sidetone + 200;
 
 	ret = hid_hw_raw_request(hid_dev, CORSAIR_VOID_SIDETONE_REQUEST_ID,
-				 send_buf, 12, HID_FEATURE_REPORT, HID_REQ_SET_REPORT);
+				 send_buf, 12, HID_FEATURE_REPORT,
+				 HID_REQ_SET_REPORT);
 	if (ret < 0)
 		hid_warn(hid_dev, "failed to send sidetone (reason: %d)", ret);
 	else
@@ -437,13 +438,16 @@ static int corsair_void_request_status(struct hid_device *hid_dev, int id)
 	if (ret < 0) {
 		switch (id) {
 		case CORSAIR_VOID_STATUS_REPORT_ID:
-			hid_warn(hid_dev, "failed to request battery (reason: %d)", ret);
+			hid_warn(hid_dev, "failed to request battery (reason: %d)",
+				 ret);
 			break;
 		case CORSAIR_VOID_FIRMWARE_REPORT_ID:
-			hid_warn(hid_dev, "failed to request firmware (reason: %d)", ret);
+			hid_warn(hid_dev, "failed to request firmware (reason: %d)",
+				 ret);
 			break;
 		default:
-			hid_warn(hid_dev, "failed to send report %d (reason: %d)", id, ret);
+			hid_warn(hid_dev, "failed to send report %d (reason: %d)",
+				 id, ret);
 			break;
 		}
 	} else {
@@ -464,7 +468,8 @@ static void corsair_void_status_work_handler(struct work_struct *work)
 	struct delayed_work *delayed_work;
 
 	delayed_work = container_of(work, struct delayed_work, work);
-	drvdata = container_of(delayed_work, struct corsair_void_drvdata, delayed_status_work);
+	drvdata = container_of(delayed_work, struct corsair_void_drvdata,
+			       delayed_status_work);
 
 	corsair_void_request_status(drvdata->hid_dev,
 				    CORSAIR_VOID_STATUS_REPORT_ID);
@@ -476,7 +481,8 @@ static void corsair_void_firmware_work_handler(struct work_struct *work)
 	struct delayed_work *delayed_work;
 
 	delayed_work = container_of(work, struct delayed_work, work);
-	drvdata = container_of(delayed_work, struct corsair_void_drvdata, delayed_firmware_work);
+	drvdata = container_of(delayed_work, struct corsair_void_drvdata,
+			       delayed_firmware_work);
 
 	corsair_void_request_status(drvdata->hid_dev,
 				    CORSAIR_VOID_FIRMWARE_REPORT_ID);
@@ -486,7 +492,8 @@ static void corsair_void_battery_remove_work_handler(struct work_struct *work)
 {
 	struct corsair_void_drvdata *drvdata;
 
-	drvdata = container_of(work, struct corsair_void_drvdata, battery_remove_work);
+	drvdata = container_of(work, struct corsair_void_drvdata,
+			       battery_remove_work);
 	mutex_lock(&drvdata->battery_mutex);
 	if (drvdata->battery) {
 		power_supply_unregister(drvdata->battery);
@@ -500,28 +507,30 @@ static void corsair_void_battery_add_work_handler(struct work_struct *work)
 	struct corsair_void_drvdata *drvdata;
 	struct power_supply_config psy_cfg;
 
-	drvdata = container_of(work, struct corsair_void_drvdata, battery_add_work);
+	drvdata = container_of(work, struct corsair_void_drvdata,
+			       battery_add_work);
 	mutex_lock(&drvdata->battery_mutex);
-	if (!drvdata->battery) {
-		psy_cfg.drv_data = drvdata;
-		drvdata->battery = power_supply_register(drvdata->dev,
-							 &drvdata->battery_desc,
-							 &psy_cfg);
+	if (drvdata->battery)
+		goto battery_unlock;
 
-		if (IS_ERR(drvdata->battery)) {
-			hid_err(drvdata->hid_dev,
-				"failed to register battery '%s' (reason: %ld)\n",
-				drvdata->battery_desc.name,
-				PTR_ERR(drvdata->battery));
-			drvdata->battery = NULL;
-			goto battery_unlock;
-		}
+	psy_cfg.drv_data = drvdata;
+	drvdata->battery = power_supply_register(drvdata->dev,
+						 &drvdata->battery_desc,
+						 &psy_cfg);
 
-		if (power_supply_powers(drvdata->battery, drvdata->dev)) {
-			power_supply_unregister(drvdata->battery);
-			drvdata->battery = NULL;
-			goto battery_unlock;
-		}
+	if (IS_ERR(drvdata->battery)) {
+		hid_err(drvdata->hid_dev,
+			"failed to register battery '%s' (reason: %ld)\n",
+			drvdata->battery_desc.name,
+			PTR_ERR(drvdata->battery));
+		drvdata->battery = NULL;
+		goto battery_unlock;
+	}
+
+	if (power_supply_powers(drvdata->battery, drvdata->dev)) {
+		power_supply_unregister(drvdata->battery);
+		drvdata->battery = NULL;
+		goto battery_unlock;
 	}
 
 battery_unlock:
@@ -531,7 +540,8 @@ battery_unlock:
 static void corsair_void_headset_connected(struct corsair_void_drvdata *drvdata)
 {
 	schedule_work(&drvdata->battery_add_work);
-	schedule_delayed_work(&drvdata->delayed_firmware_work, msecs_to_jiffies(100));
+	schedule_delayed_work(&drvdata->delayed_firmware_work,
+			      msecs_to_jiffies(100));
 }
 
 static void corsair_void_headset_disconnected(struct corsair_void_drvdata *drvdata)
@@ -622,8 +632,10 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 	drvdata->battery_desc.get_property = corsair_void_battery_get_property;
 
 	drvdata->battery = NULL;
-	INIT_WORK(&drvdata->battery_remove_work, corsair_void_battery_remove_work_handler);
-	INIT_WORK(&drvdata->battery_add_work, corsair_void_battery_add_work_handler);
+	INIT_WORK(&drvdata->battery_remove_work,
+		  corsair_void_battery_remove_work_handler);
+	INIT_WORK(&drvdata->battery_add_work,
+		  corsair_void_battery_add_work_handler);
 	mutex_init(&drvdata->battery_mutex);
 
 	ret = sysfs_create_group(&hid_dev->dev.kobj, &corsair_void_attr_group);
@@ -641,12 +653,14 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 	/* Refresh battery data, in case wireless headset is already connected */
 	INIT_DELAYED_WORK(&drvdata->delayed_status_work,
 			  corsair_void_status_work_handler);
-	schedule_delayed_work(&drvdata->delayed_status_work, msecs_to_jiffies(100));
+	schedule_delayed_work(&drvdata->delayed_status_work,
+			      msecs_to_jiffies(100));
 
 	/* Refresh firmware versions */
 	INIT_DELAYED_WORK(&drvdata->delayed_firmware_work,
 			  corsair_void_firmware_work_handler);
-	schedule_delayed_work(&drvdata->delayed_firmware_work, msecs_to_jiffies(100));
+	schedule_delayed_work(&drvdata->delayed_firmware_work,
+			      msecs_to_jiffies(100));
 
 	goto success;
 
