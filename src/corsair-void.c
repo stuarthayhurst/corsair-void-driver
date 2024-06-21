@@ -446,8 +446,13 @@ static ssize_t corsair_void_send_sidetone(struct device *dev,
 
 static int corsair_void_request_status(struct hid_device *hid_dev, int id)
 {
-	unsigned char send_buf[2];
+	unsigned char *send_buf;
 	int ret;
+
+	send_buf = kzalloc(12, GFP_KERNEL);
+	if (!send_buf) {
+		return -ENOMEM;
+	}
 
 	/* Packet format to request data item (status / firmware) refresh */
 	send_buf[0] = CORSAIR_VOID_STATUS_REQUEST_ID;
@@ -468,10 +473,12 @@ static int corsair_void_request_status(struct hid_device *hid_dev, int id)
 			hid_warn(hid_dev, "failed to send report %d (reason: %d)", id, ret);
 			break;
 		}
-		return ret;
+	} else {
+		ret = 0;
 	}
 
-	return 0;
+	kfree(send_buf);
+	return ret;
 }
 
 /*
