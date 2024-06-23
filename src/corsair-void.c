@@ -76,6 +76,7 @@
 #include <linux/power_supply.h>
 #include <linux/usb.h>
 #include <linux/workqueue.h>
+#include <linux/version.h>
 
 #include "hid-ids.h"
 
@@ -146,6 +147,7 @@ struct corsair_void_drvdata {
  * Functions to process receiver data
 */
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
 static void corsair_void_set_wireless_status(struct corsair_void_drvdata *drvdata)
 {
 	struct usb_interface *usb_if = to_usb_interface(drvdata->dev->parent);
@@ -157,6 +159,7 @@ static void corsair_void_set_wireless_status(struct corsair_void_drvdata *drvdat
 					USB_WIRELESS_STATUS_CONNECTED :
 					USB_WIRELESS_STATUS_DISCONNECTED);
 }
+#endif
 
 static void corsair_void_set_unknown_batt(struct corsair_void_drvdata *drvdata)
 {
@@ -178,7 +181,9 @@ static void corsair_void_set_unknown_wireless_data(struct corsair_void_drvdata *
 	drvdata->connected = false;
 	drvdata->mic_up = false;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
 	corsair_void_set_wireless_status(drvdata);
+#endif
 }
 
 static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata,
@@ -231,7 +236,9 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata,
 	}
 
 	battery_data->capacity = raw_battery_capacity;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
 	corsair_void_set_wireless_status(drvdata);
+#endif
 
 	goto success;
 unknown_battery:
