@@ -199,8 +199,14 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata,
 	orig_battery_data = *battery_data;
 
 	/* Headset not connected, or it's wired */
-	if (raw_connection_status != CORSAIR_VOID_WIRELESS_CONNECTED)
+	if (raw_connection_status != CORSAIR_VOID_WIRELESS_CONNECTED) {
+		hid_info(drvdata->hid_dev, "Connection status '%d'",
+			 raw_connection_status);
 		goto unknown_battery;
+	} else {
+		hid_info(drvdata->hid_dev, "Not setting unknown data, connection status '%d'",
+			 raw_connection_status);
+	}
 
 	/* Battery information unavailable */
 	if (raw_battery_status == 0)
