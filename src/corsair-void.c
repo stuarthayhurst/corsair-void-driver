@@ -636,7 +636,7 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 		  corsair_void_battery_remove_work_handler);
 	INIT_WORK(&drvdata->battery_add_work,
 		  corsair_void_battery_add_work_handler);
-	mutex_init(&drvdata->battery_mutex);
+	devm_mutex_init(drvdata->dev, &drvdata->battery_mutex);
 
 	ret = sysfs_create_group(&hid_dev->dev.kobj, &corsair_void_attr_group);
 	if (ret)
@@ -681,7 +681,6 @@ static void corsair_void_remove(struct hid_device *hid_dev)
 	cancel_work_sync(&drvdata->battery_add_work);
 	if (drvdata->battery)
 		power_supply_unregister(drvdata->battery);
-	mutex_destroy(&drvdata->battery_mutex);
 
 	cancel_delayed_work_sync(&drvdata->delayed_firmware_work);
 	sysfs_remove_group(&hid_dev->dev.kobj, &corsair_void_attr_group);
