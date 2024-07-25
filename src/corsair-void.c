@@ -30,6 +30,7 @@
  *    This report is sent every time the mic is moved, no polling required
  *
  * 3: CONNECTION STATUS
+ *  16: Wired headset
  *  38: Initialising
  *  49: Lost connection
  *  51: Disconnected, searching
