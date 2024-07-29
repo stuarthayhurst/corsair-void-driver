@@ -91,8 +91,15 @@
 #define CORSAIR_VOID_STATUS_REPORT_ID		0x64
 #define CORSAIR_VOID_FIRMWARE_REPORT_ID		0x66
 
+#define CORSAIR_VOID_USB_SIDETONE_REQUEST	0x1
+#define CORSAIR_VOID_USB_SIDETONE_REQUEST_TYPE	0x21
+#define CORSAIR_VOID_USB_SIDETONE_VALUE		0x200
+#define CORSAIR_VOID_USB_SIDETONE_INDEX		0xB00
+
 #define CORSAIR_VOID_MIC_MASK			GENMASK(7, 7)
 #define CORSAIR_VOID_CAPACITY_MASK		GENMASK(6, 0)
+#define CORSAIR_VOID_SIDETONE_LOW		GENMASK(7, 0)
+#define CORSAIR_VOID_SIDETONE_HIGH		GENMASK(15, 8)
 
 #define CORSAIR_VOID_WIRELESS_CONNECTED		177
 
@@ -370,21 +377,46 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 	return ret;
 }
 
-static ssize_t corsair_void_send_sidetone(struct device *dev,
-					  struct device_attribute *attr,
-					  const char *buf, size_t count)
+static int corsair_void_send_sidetone_wired(struct device *dev, const char *buf,
+					    unsigned int sidetone)
+{
+	struct usb_interface *usb_if = to_usb_interface(dev->parent);
+	struct usb_device *usb_dev = interface_to_usbdev(usb_if);
+	unsigned char *send_buf;
+	int ret = 0;
+
+	/* sidetone must be between 0 and 4096 inclusive */
+	if (sidetone > 4096)
+		return -EINVAL;
+
+	send_buf = kzalloc(2, GFP_KERNEL);
+	if (!send_buf)
+		return -ENOMEM;
+
+	/* Packet format to set sidetone for wired headsets */
+	send_buf[0] = FIELD_GET(CORSAIR_VOID_SIDETONE_LOW, sidetone);
+	send_buf[1] = FIELD_GET(CORSAIR_VOID_SIDETONE_HIGH, sidetone);
+
+	ret = usb_control_msg(usb_dev, usb_sndctrlpipe(usb_dev, 0),
+			      CORSAIR_VOID_USB_SIDETONE_REQUEST,
+			      CORSAIR_VOID_USB_SIDETONE_REQUEST_TYPE,
+			      CORSAIR_VOID_USB_SIDETONE_VALUE,
+			      CORSAIR_VOID_USB_SIDETONE_INDEX,
+			      send_buf, 2, USB_CTRL_SET_TIMEOUT);
+	if (ret > 0)
+		ret = 0;
+
+	kfree(send_buf);
+	return ret;
+}
+
+static int corsair_void_send_sidetone_wireless(struct device *dev, const char *buf,
+					       unsigned char sidetone)
 {
 	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
 	struct hid_device *hid_dev = drvdata->hid_dev;
-	unsigned char sidetone;
 	unsigned char *send_buf;
-	int ret;
-
-	if (!drvdata->connected)
-		return -ENODEV;
-
-	if (kstrtou8(buf, 10, &sidetone))
-		return -EINVAL;
+	int ret = 0;
 
 	/* sidetone must be between 0 and 55 inclusive */
 	if (sidetone > 55)
@@ -394,7 +426,7 @@ static ssize_t corsair_void_send_sidetone(struct device *dev,
 	if (!send_buf)
 		return -ENOMEM;
 
-	/* Packet format to set sidetone */
+	/* Packet format to set sidetone for wireless headsets */
 	send_buf[0] = CORSAIR_VOID_SIDETONE_REQUEST_ID;
 	send_buf[1] = 0x0B;
 	send_buf[2] = 0x00;
@@ -411,12 +443,38 @@ static ssize_t corsair_void_send_sidetone(struct device *dev,
 	ret = hid_hw_raw_request(hid_dev, CORSAIR_VOID_SIDETONE_REQUEST_ID,
 				 send_buf, 12, HID_FEATURE_REPORT,
 				 HID_REQ_SET_REPORT);
+	if (ret > 0)
+		ret = 0;
+
+	kfree(send_buf);
+	return ret;
+}
+
+static ssize_t corsair_void_send_sidetone(struct device *dev,
+					  struct device_attribute *attr,
+					  const char *buf, size_t count)
+{
+	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
+	struct hid_device *hid_dev = drvdata->hid_dev;
+	unsigned int sidetone;
+	int ret;
+
+	if (!drvdata->connected)
+		return -ENODEV;
+
+	if (kstrtouint(buf, 10, &sidetone))
+		return -EINVAL;
+
+	if (drvdata->is_wired)
+		ret = corsair_void_send_sidetone_wired(dev, buf, sidetone);
+	else
+		ret = corsair_void_send_sidetone_wireless(dev, buf, sidetone);
+
 	if (ret < 0)
 		hid_warn(hid_dev, "failed to send sidetone (reason: %d)", ret);
 	else
 		ret = count;
 
-	kfree(send_buf);
 	return ret;
 }
 
