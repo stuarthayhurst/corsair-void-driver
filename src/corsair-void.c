@@ -77,6 +77,7 @@
 #include <linux/power_supply.h>
 #include <linux/usb.h>
 #include <linux/workqueue.h>
+#include <asm/byteorder.h>
 
 #include "hid-ids.h"
 
@@ -98,8 +99,6 @@
 
 #define CORSAIR_VOID_MIC_MASK			GENMASK(7, 7)
 #define CORSAIR_VOID_CAPACITY_MASK		GENMASK(6, 0)
-#define CORSAIR_VOID_SIDETONE_LOW		GENMASK(7, 0)
-#define CORSAIR_VOID_SIDETONE_HIGH		GENMASK(15, 8)
 
 #define CORSAIR_VOID_WIRELESS_CONNECTED		177
 
@@ -382,31 +381,25 @@ static int corsair_void_send_sidetone_wired(struct device *dev, const char *buf,
 {
 	struct usb_interface *usb_if = to_usb_interface(dev->parent);
 	struct usb_device *usb_dev = interface_to_usbdev(usb_if);
-	unsigned char *send_buf;
+	u16 send_sidetone;
 	int ret = 0;
 
 	/* sidetone must be between 0 and 4096 inclusive */
 	if (sidetone > 4096)
 		return -EINVAL;
 
-	send_buf = kzalloc(2, GFP_KERNEL);
-	if (!send_buf)
-		return -ENOMEM;
-
 	/* Packet format to set sidetone for wired headsets */
-	send_buf[0] = FIELD_GET(CORSAIR_VOID_SIDETONE_LOW, sidetone);
-	send_buf[1] = FIELD_GET(CORSAIR_VOID_SIDETONE_HIGH, sidetone);
-
-	ret = usb_control_msg(usb_dev, usb_sndctrlpipe(usb_dev, 0),
-			      CORSAIR_VOID_USB_SIDETONE_REQUEST,
-			      CORSAIR_VOID_USB_SIDETONE_REQUEST_TYPE,
-			      CORSAIR_VOID_USB_SIDETONE_VALUE,
-			      CORSAIR_VOID_USB_SIDETONE_INDEX,
-			      send_buf, 2, USB_CTRL_SET_TIMEOUT);
+	send_sidetone = cpu_to_le16(sidetone);
+	ret = usb_control_msg_send(usb_dev, 0,
+				   CORSAIR_VOID_USB_SIDETONE_REQUEST,
+				   CORSAIR_VOID_USB_SIDETONE_REQUEST_TYPE,
+				   CORSAIR_VOID_USB_SIDETONE_VALUE,
+				   CORSAIR_VOID_USB_SIDETONE_INDEX,
+				   &send_sidetone, 2, USB_CTRL_SET_TIMEOUT,
+				   GFP_KERNEL);
 	if (ret > 0)
 		ret = 0;
 
-	kfree(send_buf);
 	return ret;
 }
 
