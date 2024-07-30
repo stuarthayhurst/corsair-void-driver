@@ -397,8 +397,6 @@ static int corsair_void_send_sidetone_wired(struct device *dev, const char *buf,
 				   CORSAIR_VOID_USB_SIDETONE_INDEX,
 				   &send_sidetone, 2, USB_CTRL_SET_TIMEOUT,
 				   GFP_KERNEL);
-	if (ret > 0)
-		ret = 0;
 
 	return ret;
 }
@@ -432,8 +430,6 @@ static int corsair_void_send_sidetone_wireless(struct device *dev, const char *b
 	ret = hid_hw_raw_request(hid_dev, CORSAIR_VOID_SIDETONE_REQUEST_ID,
 				 send_buf, 12, HID_FEATURE_REPORT,
 				 HID_REQ_SET_REPORT);
-	if (ret > 0)
-		ret = 0;
 
 	kfree(send_buf);
 	return ret;
