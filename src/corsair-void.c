@@ -71,6 +71,7 @@
 
 #include <linux/bitfield.h>
 #include <linux/bitops.h>
+#include <linux/cleanup.h>
 #include <linux/hid.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
@@ -251,11 +252,11 @@ success:
 
 	/* Inform power supply if battery values changed */
 	if (memcmp(&orig_battery_data, battery_data, battery_struct_size)) {
-		mutex_lock(&drvdata->battery_mutex);
-		if (drvdata->battery) {
-			power_supply_changed(drvdata->battery);
+		scoped_guard(mutex, &drvdata->battery_mutex) {
+			if (drvdata->battery) {
+				power_supply_changed(drvdata->battery);
+			}
 		}
-		mutex_unlock(&drvdata->battery_mutex);
 	}
 }
 
@@ -542,12 +543,12 @@ static void corsair_void_battery_remove_work_handler(struct work_struct *work)
 
 	drvdata = container_of(work, struct corsair_void_drvdata,
 			       battery_remove_work);
-	mutex_lock(&drvdata->battery_mutex);
-	if (drvdata->battery) {
-		power_supply_unregister(drvdata->battery);
-		drvdata->battery = NULL;
+	scoped_guard(mutex, &drvdata->battery_mutex) {
+		if (drvdata->battery) {
+			power_supply_unregister(drvdata->battery);
+			drvdata->battery = NULL;
+		}
 	}
-	mutex_unlock(&drvdata->battery_mutex);
 }
 
 static void corsair_void_battery_add_work_handler(struct work_struct *work)
@@ -557,9 +558,9 @@ static void corsair_void_battery_add_work_handler(struct work_struct *work)
 
 	drvdata = container_of(work, struct corsair_void_drvdata,
 			       battery_add_work);
-	mutex_lock(&drvdata->battery_mutex);
+	guard(mutex)(&drvdata->battery_mutex);
 	if (drvdata->battery)
-		goto battery_unlock;
+		return;
 
 	psy_cfg.drv_data = drvdata;
 	drvdata->battery = power_supply_register(drvdata->dev,
@@ -572,17 +573,14 @@ static void corsair_void_battery_add_work_handler(struct work_struct *work)
 			drvdata->battery_desc.name,
 			PTR_ERR(drvdata->battery));
 		drvdata->battery = NULL;
-		goto battery_unlock;
+		return;
 	}
 
 	if (power_supply_powers(drvdata->battery, drvdata->dev)) {
 		power_supply_unregister(drvdata->battery);
 		drvdata->battery = NULL;
-		goto battery_unlock;
+		return;
 	}
-
-battery_unlock:
-	mutex_unlock(&drvdata->battery_mutex);
 }
 
 static void corsair_void_headset_connected(struct corsair_void_drvdata *drvdata)
