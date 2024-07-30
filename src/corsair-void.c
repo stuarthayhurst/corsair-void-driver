@@ -102,6 +102,9 @@
 
 #define CORSAIR_VOID_WIRELESS_CONNECTED		177
 
+#define CORSAIR_VOID_SIDETONE_MAX_WIRELESS	55
+#define CORSAIR_VOID_SIDETONE_MAX_WIRED		4096
+
 enum {
 	CORSAIR_VOID_WIRELESS,
 	CORSAIR_VOID_WIRED,
@@ -130,6 +133,7 @@ struct corsair_void_drvdata {
 
 	char *name;
 	bool is_wired;
+	unsigned int max_sidetone;
 
 	struct corsair_void_battery_data battery_data;
 	bool mic_up;
@@ -384,10 +388,6 @@ static int corsair_void_send_sidetone_wired(struct device *dev, const char *buf,
 	u16 send_sidetone;
 	int ret = 0;
 
-	/* sidetone must be between 0 and 4096 inclusive */
-	if (sidetone > 4096)
-		return -EINVAL;
-
 	/* Packet format to set sidetone for wired headsets */
 	send_sidetone = cpu_to_le16(sidetone);
 	ret = usb_control_msg_send(usb_dev, 0,
@@ -410,10 +410,6 @@ static int corsair_void_send_sidetone_wireless(struct device *dev, const char *b
 	struct hid_device *hid_dev = drvdata->hid_dev;
 	unsigned char *send_buf;
 	int ret = 0;
-
-	/* sidetone must be between 0 and 55 inclusive */
-	if (sidetone > 55)
-		return -EINVAL;
 
 	send_buf = kzalloc(12, GFP_KERNEL);
 	if (!send_buf)
@@ -456,6 +452,10 @@ static ssize_t corsair_void_send_sidetone(struct device *dev,
 		return -ENODEV;
 
 	if (kstrtouint(buf, 10, &sidetone))
+		return -EINVAL;
+
+	/* sidetone must be between 0 and drvdata->max_sidetone inclusive */
+	if (sidetone > drvdata->max_sidetone)
 		return -EINVAL;
 
 	if (drvdata->is_wired)
@@ -654,6 +654,10 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 	drvdata->dev = &hid_dev->dev;
 	drvdata->hid_dev = hid_dev;
 	drvdata->is_wired = hid_id->driver_data == CORSAIR_VOID_WIRED;
+
+	drvdata->max_sidetone = CORSAIR_VOID_SIDETONE_MAX_WIRELESS;
+	if (drvdata->is_wired)
+		drvdata->max_sidetone = CORSAIR_VOID_SIDETONE_MAX_WIRED;
 
 	/* Set initial values for no wireless headset attached */
 	/* If a headset is attached, it'll be prompted later */
