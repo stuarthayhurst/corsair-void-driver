@@ -688,7 +688,9 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 		  corsair_void_battery_remove_work_handler);
 	INIT_WORK(&drvdata->battery_add_work,
 		  corsair_void_battery_add_work_handler);
-	devm_mutex_init(drvdata->dev, &drvdata->battery_mutex);
+	ret = devm_mutex_init(drvdata->dev, &drvdata->battery_mutex);
+	if (ret)
+		return ret;
 
 	ret = sysfs_create_group(&hid_dev->dev.kobj, &corsair_void_attr_group);
 	if (ret)
