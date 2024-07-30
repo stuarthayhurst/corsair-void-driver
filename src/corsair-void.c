@@ -134,7 +134,7 @@ struct corsair_void_drvdata {
 
 	char *name;
 	bool is_wired;
-	unsigned int max_sidetone;
+	unsigned int sidetone_max;
 
 	struct corsair_void_battery_data battery_data;
 	bool mic_up;
@@ -335,6 +335,14 @@ static ssize_t corsair_void_report_firmware(struct device *dev,
 	return sysfs_emit(buf, "%d.%02d\n", major, minor);
 }
 
+static ssize_t corsair_void_report_sidetone_max(struct device *dev,
+						struct device_attribute *attr,
+						char *buf)
+{
+	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
+	return sysfs_emit(buf, "%d\n", drvdata->sidetone_max);
+}
+
 /*
  * Functions to send data to headset
 */
@@ -451,8 +459,8 @@ static ssize_t corsair_void_send_sidetone(struct device *dev,
 	if (kstrtouint(buf, 10, &sidetone))
 		return -EINVAL;
 
-	/* sidetone must be between 0 and drvdata->max_sidetone inclusive */
-	if (sidetone > drvdata->max_sidetone)
+	/* sidetone must be between 0 and drvdata->sidetone_max inclusive */
+	if (sidetone > drvdata->sidetone_max)
 		return -EINVAL;
 
 	if (drvdata->is_wired)
@@ -602,9 +610,10 @@ static void corsair_void_headset_disconnected(struct corsair_void_drvdata *drvda
  * Driver setup, probing and HID event handling
 */
 
-static DEVICE_ATTR(microphone_up, 0444, corsair_void_report_mic_up, NULL);
 static DEVICE_ATTR(fw_version_receiver, 0444, corsair_void_report_firmware, NULL);
 static DEVICE_ATTR(fw_version_headset, 0444, corsair_void_report_firmware, NULL);
+static DEVICE_ATTR(microphone_up, 0444, corsair_void_report_mic_up, NULL);
+static DEVICE_ATTR(sidetone_max, 0444, corsair_void_report_sidetone_max, NULL);
 
 /* Write-only alert, as it only plays a sound (nothing to report back) */
 static DEVICE_ATTR(send_alert, 0200, NULL, corsair_void_send_alert);
@@ -612,11 +621,12 @@ static DEVICE_ATTR(send_alert, 0200, NULL, corsair_void_send_alert);
 static DEVICE_ATTR(set_sidetone, 0200, NULL, corsair_void_send_sidetone);
 
 static struct attribute *corsair_void_attrs[] = {
+	&dev_attr_fw_version_receiver.attr,
+	&dev_attr_fw_version_headset.attr,
 	&dev_attr_microphone_up.attr,
 	&dev_attr_send_alert.attr,
 	&dev_attr_set_sidetone.attr,
-	&dev_attr_fw_version_receiver.attr,
-	&dev_attr_fw_version_headset.attr,
+	&dev_attr_sidetone_max.attr,
 	NULL,
 };
 
@@ -649,9 +659,9 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 	drvdata->hid_dev = hid_dev;
 	drvdata->is_wired = hid_id->driver_data == CORSAIR_VOID_WIRED;
 
-	drvdata->max_sidetone = CORSAIR_VOID_SIDETONE_MAX_WIRELESS;
+	drvdata->sidetone_max = CORSAIR_VOID_SIDETONE_MAX_WIRELESS;
 	if (drvdata->is_wired)
-		drvdata->max_sidetone = CORSAIR_VOID_SIDETONE_MAX_WIRED;
+		drvdata->sidetone_max = CORSAIR_VOID_SIDETONE_MAX_WIRED;
 
 	/* Set initial values for no wireless headset attached */
 	/* If a headset is attached, it'll be prompted later */

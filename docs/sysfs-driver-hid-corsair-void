@@ -29,4 +29,10 @@ What:		/sys/bus/hid/drivers/corsair-void/<dev>/set_sidetone
 Date:		December 2023
 KernelVersion:	T.B.C
 Contact:	Stuart Hayhurst <stuart.a.hayhurst@gmail.com>
-Description:	(W) Set the sidetone volume (0 - 55)
+Description:	(W) Set the sidetone volume (0 - sidetone_max)
+
+What:		/sys/bus/hid/drivers/corsair-void/<dev>/sidetone_max
+Date:		July 2024
+KernelVersion:	T.B.C
+Contact:	Stuart Hayhurst <stuart.a.hayhurst@gmail.com>
+Description:	(R) Report the maximum sidetone volume

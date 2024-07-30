@@ -19,7 +19,9 @@
   - [x] Battery reporting
   - [ ] LED support (on / off, brightness, colour)
     - I currently have no plans to tackle this, but pull requests are welcome
-  - [x] Sidetone support `(sysfs) set_sidetone [0 - 55] (write-only)`
+  - [x] Sidetone support
+    - [x] `(sysfs) set_sidetone: [0 - sidetone_max] (write-only)`
+    - [x] `(sysfs) sidetone_max (read-only)`
   - [x] Misc device / kernel attributes
     - [x] `(USB) wireless_status`
     - [x] `(sysfs) microphone_up: [0 / 1] (read-only)`
