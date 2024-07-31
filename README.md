@@ -23,9 +23,10 @@
     - [x] `(sysfs) set_sidetone: [0 - sidetone_max] (write-only)`
     - [x] `(sysfs) sidetone_max (read-only)`
   - [x] Misc device / kernel attributes
-    - [x] `(USB) wireless_status`
+    - [x] `(USB) wireless_status (wireless only)`
     - [x] `(sysfs) microphone_up: [0 / 1] (read-only)`
-    - [x] `(sysfs) send_alert: [0 / 1] (write-only)`
+    - [x] `(sysfs) send_alert: [0 / 1] (write-only), (wireless only)`
+      - If this can be done on wired headsets, feel free to submit a pull request
     - [x] `(sysfs) fw_version_[receiver / headset] (read-only)`
   - [ ] Wired, wireless and surround headset support
     - Currently, only wireless headsets are properly tested

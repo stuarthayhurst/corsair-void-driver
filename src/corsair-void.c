@@ -360,6 +360,9 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 	if (!drvdata->connected)
 		return -ENODEV;
 
+	if (drvdata->is_wired)
+		return -ENODEV;
+
 	if (kstrtou8(buf, 10, &alert_id))
 		return -EINVAL;
 
