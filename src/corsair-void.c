@@ -377,7 +377,8 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 	send_buf[2] = alert_id;
 
 	ret = hid_hw_raw_request(hid_dev, CORSAIR_VOID_NOTIF_REQUEST_ID,
-			  send_buf, 3, HID_OUTPUT_REPORT, HID_REQ_SET_REPORT);
+				 send_buf, 3, HID_OUTPUT_REPORT,
+				 HID_REQ_SET_REPORT);
 	if (ret < 0) {
 		hid_warn(hid_dev, "failed to send alert request (reason: %d)",
 			 ret);
