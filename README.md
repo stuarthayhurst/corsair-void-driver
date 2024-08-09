@@ -28,10 +28,9 @@
     - [x] `(sysfs) send_alert: [0 / 1] (write-only), (wireless only)`
       - If this can be done on wired headsets, feel free to submit a pull request
     - [x] `(sysfs) fw_version_[receiver / headset] (read-only)`
-  - [ ] Wired, wireless and surround headset support
-    - Currently, only wireless headsets are properly tested
-    - If you have a spare wired or surround variant, please get in touch
-      - If it's not spare, feel free to hack away at this driver
+  - [x] Wired, wireless and surround headset support
+    - Wired and surround headsets aren't as well tested
+      - If you have one of these, please file an issue with whether or not the sidetone works
 
 ## References:
   - [headsetcontrol](https://github.com/Sapd/HeadsetControl/blob/master/src/devices/corsair_void.c)
