@@ -3,7 +3,7 @@ Date:		January 2024
 KernelVersion:	T.B.C
 Contact:	Stuart Hayhurst <stuart.a.hayhurst@gmail.com>
 Description:	(R) The firmware version of the headset
-			* Returns -ENODATA if no headset is attached
+			* Returns -ENODATA if no version was reported
 
 What:		/sys/bus/hid/drivers/corsair-void/<dev>/fw_version_receiver
 Date:		January 2024
