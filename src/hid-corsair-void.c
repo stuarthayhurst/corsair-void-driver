@@ -643,7 +643,6 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 {
 	int ret = 0;
 	struct corsair_void_drvdata *drvdata;
-	struct power_supply_config psy_cfg;
 	char *name;
 	int name_length;
 
@@ -656,7 +655,6 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 		return -ENOMEM;
 
 	hid_set_drvdata(hid_dev, drvdata);
-	psy_cfg.drv_data = drvdata;
 	dev_set_drvdata(&hid_dev->dev, drvdata);
 
 	drvdata->dev = &hid_dev->dev;
