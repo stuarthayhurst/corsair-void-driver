@@ -837,7 +837,7 @@ static const struct hid_device_id corsair_void_devices[] = {
 MODULE_DEVICE_TABLE(hid, corsair_void_devices);
 
 static struct hid_driver corsair_void_driver = {
-	.name = "corsair-void",
+	.name = "hid-corsair-void",
 	.id_table = corsair_void_devices,
 	.probe = corsair_void_probe,
 	.remove = corsair_void_remove,
