@@ -406,7 +406,7 @@ static int corsair_void_send_sidetone_wired(struct device *dev, const char *buf,
 {
 	struct usb_interface *usb_if = to_usb_interface(dev->parent);
 	struct usb_device *usb_dev = interface_to_usbdev(usb_if);
-	u16 send_sidetone;
+	__le16 send_sidetone;
 	int ret = 0;
 
 	/* Packet format to set sidetone for wired headsets */
