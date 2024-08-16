@@ -493,7 +493,7 @@ static int corsair_void_request_status(struct hid_device *hid_dev, int id)
 	unsigned char *send_buf;
 	int ret;
 
-	send_buf = kzalloc(12, GFP_KERNEL);
+	send_buf = kzalloc(2, GFP_KERNEL);
 	if (!send_buf)
 		return -ENOMEM;
 
