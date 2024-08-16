@@ -378,7 +378,7 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 	if (alert_id >= 2)
 		return -EINVAL;
 
-	send_buf = kzalloc(3, GFP_KERNEL);
+	send_buf = kmalloc(3, GFP_KERNEL);
 	if (!send_buf)
 		return -ENOMEM;
 
@@ -430,7 +430,7 @@ static int corsair_void_send_sidetone_wireless(struct device *dev, const char *b
 	unsigned char *send_buf;
 	int ret = 0;
 
-	send_buf = kzalloc(12, GFP_KERNEL);
+	send_buf = kmalloc(12, GFP_KERNEL);
 	if (!send_buf)
 		return -ENOMEM;
 
@@ -493,7 +493,7 @@ static int corsair_void_request_status(struct hid_device *hid_dev, int id)
 	unsigned char *send_buf;
 	int ret;
 
-	send_buf = kzalloc(2, GFP_KERNEL);
+	send_buf = kmalloc(2, GFP_KERNEL);
 	if (!send_buf)
 		return -ENOMEM;
 
