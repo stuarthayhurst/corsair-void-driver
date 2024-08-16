@@ -111,6 +111,14 @@ enum {
 	CORSAIR_VOID_WIRED,
 };
 
+enum {
+	CORSAIR_VOID_BATTERY_NORMAL	= 1,
+	CORSAIR_VOID_BATTERY_LOW	= 2,
+	CORSAIR_VOID_BATTERY_CRITICAL	= 3,
+	CORSAIR_VOID_BATTERY_CHARGED	= 4,
+	CORSAIR_VOID_BATTERY_CHARGING	= 5,
+};
+
 static enum power_supply_property corsair_void_battery_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
 	POWER_SUPPLY_PROP_PRESENT,
@@ -219,9 +227,9 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata,
 
 	/* Set battery status */
 	switch (raw_battery_status) {
-	case 1:
-	case 2:
-	case 3: /* Battery normal / low / critical */
+	case CORSAIR_VOID_BATTERY_NORMAL:
+	case CORSAIR_VOID_BATTERY_LOW:
+	case CORSAIR_VOID_BATTERY_CRITICAL:
 		battery_data->status = POWER_SUPPLY_STATUS_DISCHARGING;
 		if (raw_battery_status == 2)
 			battery_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_LOW;
@@ -229,10 +237,10 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata,
 			battery_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_CRITICAL;
 
 		break;
-	case 4: /* Battery fully charged */
+	case CORSAIR_VOID_BATTERY_CHARGED:
 		battery_data->status = POWER_SUPPLY_STATUS_FULL;
 		break;
-	case 5: /* Battery charging */
+	case CORSAIR_VOID_BATTERY_CHARGING:
 		battery_data->status = POWER_SUPPLY_STATUS_CHARGING;
 		break;
 	default:
