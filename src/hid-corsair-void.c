@@ -853,5 +853,5 @@ static struct hid_driver corsair_void_driver = {
 module_hid_driver(corsair_void_driver);
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Stuart Hayhurst");
+MODULE_AUTHOR("Stuart Hayhurst <stuart.a.hayhurst@gmail.com>");
 MODULE_DESCRIPTION("HID driver for Corsair Void headsets");
