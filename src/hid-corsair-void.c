@@ -406,20 +406,17 @@ static int corsair_void_set_sidetone_wired(struct device *dev, const char *buf,
 {
 	struct usb_interface *usb_if = to_usb_interface(dev->parent);
 	struct usb_device *usb_dev = interface_to_usbdev(usb_if);
-	__le16 sidetone_le;
-	int ret = 0;
 
 	/* Packet format to set sidetone for wired headsets */
-	sidetone_le = cpu_to_le16(sidetone);
-	ret = usb_control_msg_send(usb_dev, 0,
+	__le16 sidetone_le = cpu_to_le16(sidetone);
+
+	return usb_control_msg_send(usb_dev, 0,
 				   CORSAIR_VOID_USB_SIDETONE_REQUEST,
 				   CORSAIR_VOID_USB_SIDETONE_REQUEST_TYPE,
 				   CORSAIR_VOID_USB_SIDETONE_VALUE,
 				   CORSAIR_VOID_USB_SIDETONE_INDEX,
 				   &sidetone_le, 2, USB_CTRL_SET_TIMEOUT,
 				   GFP_KERNEL);
-
-	return ret;
 }
 
 static int corsair_void_set_sidetone_wireless(struct device *dev, const char *buf,
