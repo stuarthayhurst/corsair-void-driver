@@ -310,9 +310,9 @@ static int corsair_void_battery_get_property(struct power_supply *psy,
 	return 0;
 }
 
-static ssize_t corsair_void_report_mic_up(struct device *dev,
-					  struct device_attribute *attr,
-					  char *buf)
+static ssize_t microphone_up_show(struct device *dev,
+				  struct device_attribute *attr,
+				  char *buf)
 {
 	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
 
@@ -343,9 +343,9 @@ static ssize_t corsair_void_report_firmware(struct device *dev,
 	return sysfs_emit(buf, "%d.%02d\n", major, minor);
 }
 
-static ssize_t corsair_void_report_sidetone_max(struct device *dev,
-						struct device_attribute *attr,
-						char *buf)
+static ssize_t sidetone_max_show(struct device *dev,
+				 struct device_attribute *attr,
+				 char *buf)
 {
 	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
 	return sysfs_emit(buf, "%d\n", drvdata->sidetone_max);
@@ -355,9 +355,9 @@ static ssize_t corsair_void_report_sidetone_max(struct device *dev,
  * Functions to send data to headset
 */
 
-static ssize_t corsair_void_send_alert(struct device *dev,
-				       struct device_attribute *attr,
-				       const char *buf, size_t count)
+static ssize_t send_alert_store(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t count)
 {
 	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
 	struct hid_device *hid_dev = drvdata->hid_dev;
@@ -401,29 +401,29 @@ static ssize_t corsair_void_send_alert(struct device *dev,
 	return ret;
 }
 
-static int corsair_void_send_sidetone_wired(struct device *dev, const char *buf,
-					    unsigned int sidetone)
+static int corsair_void_set_sidetone_wired(struct device *dev, const char *buf,
+					   unsigned int sidetone)
 {
 	struct usb_interface *usb_if = to_usb_interface(dev->parent);
 	struct usb_device *usb_dev = interface_to_usbdev(usb_if);
-	__le16 send_sidetone;
+	__le16 sidetone_le;
 	int ret = 0;
 
 	/* Packet format to set sidetone for wired headsets */
-	send_sidetone = cpu_to_le16(sidetone);
+	sidetone_le = cpu_to_le16(sidetone);
 	ret = usb_control_msg_send(usb_dev, 0,
 				   CORSAIR_VOID_USB_SIDETONE_REQUEST,
 				   CORSAIR_VOID_USB_SIDETONE_REQUEST_TYPE,
 				   CORSAIR_VOID_USB_SIDETONE_VALUE,
 				   CORSAIR_VOID_USB_SIDETONE_INDEX,
-				   &send_sidetone, 2, USB_CTRL_SET_TIMEOUT,
+				   &sidetone_le, 2, USB_CTRL_SET_TIMEOUT,
 				   GFP_KERNEL);
 
 	return ret;
 }
 
-static int corsair_void_send_sidetone_wireless(struct device *dev, const char *buf,
-					       unsigned char sidetone)
+static int corsair_void_set_sidetone_wireless(struct device *dev, const char *buf,
+					      unsigned char sidetone)
 {
 	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
 	struct hid_device *hid_dev = drvdata->hid_dev;
@@ -456,9 +456,9 @@ static int corsair_void_send_sidetone_wireless(struct device *dev, const char *b
 	return ret;
 }
 
-static ssize_t corsair_void_send_sidetone(struct device *dev,
-					  struct device_attribute *attr,
-					  const char *buf, size_t count)
+static ssize_t set_sidetone_store(struct device *dev,
+				  struct device_attribute *attr,
+				  const char *buf, size_t count)
 {
 	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
 	struct hid_device *hid_dev = drvdata->hid_dev;
@@ -476,9 +476,9 @@ static ssize_t corsair_void_send_sidetone(struct device *dev,
 		return -EINVAL;
 
 	if (drvdata->is_wired)
-		ret = corsair_void_send_sidetone_wired(dev, buf, sidetone);
+		ret = corsair_void_set_sidetone_wired(dev, buf, sidetone);
 	else
-		ret = corsair_void_send_sidetone_wireless(dev, buf, sidetone);
+		ret = corsair_void_set_sidetone_wireless(dev, buf, sidetone);
 
 	if (ret < 0)
 		hid_warn(hid_dev, "failed to send sidetone (reason: %d)", ret);
@@ -624,13 +624,11 @@ static void corsair_void_headset_disconnected(struct corsair_void_drvdata *drvda
 
 static DEVICE_ATTR(fw_version_receiver, 0444, corsair_void_report_firmware, NULL);
 static DEVICE_ATTR(fw_version_headset, 0444, corsair_void_report_firmware, NULL);
-static DEVICE_ATTR(microphone_up, 0444, corsair_void_report_mic_up, NULL);
-static DEVICE_ATTR(sidetone_max, 0444, corsair_void_report_sidetone_max, NULL);
+static DEVICE_ATTR_RO(microphone_up);
+static DEVICE_ATTR_RO(sidetone_max);
 
-/* Write-only alert, as it only plays a sound (nothing to report back) */
-static DEVICE_ATTR(send_alert, 0200, NULL, corsair_void_send_alert);
-/* Write-only alert, as sidetone volume can't be queried */
-static DEVICE_ATTR(set_sidetone, 0200, NULL, corsair_void_send_sidetone);
+static DEVICE_ATTR_WO(send_alert);
+static DEVICE_ATTR_WO(set_sidetone);
 
 static struct attribute *corsair_void_attrs[] = {
 	&dev_attr_fw_version_receiver.attr,
