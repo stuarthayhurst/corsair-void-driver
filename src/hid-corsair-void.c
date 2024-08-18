@@ -311,8 +311,7 @@ static int corsair_void_battery_get_property(struct power_supply *psy,
 }
 
 static ssize_t microphone_up_show(struct device *dev,
-				  struct device_attribute *attr,
-				  char *buf)
+				  struct device_attribute *attr, char *buf)
 {
 	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
 
@@ -322,25 +321,31 @@ static ssize_t microphone_up_show(struct device *dev,
 	return sysfs_emit(buf, "%d\n", drvdata->mic_up);
 }
 
-static ssize_t corsair_void_report_firmware(struct device *dev,
-					    struct device_attribute *attr,
-					    char *buf)
+static ssize_t fw_version_receiver_show(struct device *dev,
+					struct device_attribute *attr,
+					char *buf)
 {
 	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
-	int major, minor;
 
-	if (!strcmp(attr->attr.name, "fw_version_receiver")) {
-		major = drvdata->fw_receiver_major;
-		minor = drvdata->fw_receiver_minor;
-	} else {
-		major = drvdata->fw_headset_major;
-		minor = drvdata->fw_headset_minor;
-	}
-
-	if (major == 0 && minor == 0)
+	if (drvdata->fw_receiver_major == 0 && drvdata->fw_receiver_minor == 0)
 		return -ENODATA;
 
-	return sysfs_emit(buf, "%d.%02d\n", major, minor);
+	return sysfs_emit(buf, "%d.%02d\n", drvdata->fw_receiver_major,
+			  drvdata->fw_receiver_minor);
+}
+
+
+static ssize_t fw_version_headset_show(struct device *dev,
+				       struct device_attribute *attr,
+				       char *buf)
+{
+	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
+
+	if (drvdata->fw_headset_major == 0 && drvdata->fw_headset_minor == 0)
+		return -ENODATA;
+
+	return sysfs_emit(buf, "%d.%02d\n", drvdata->fw_headset_major,
+			  drvdata->fw_headset_minor);
 }
 
 static ssize_t sidetone_max_show(struct device *dev,
@@ -619,8 +624,8 @@ static void corsair_void_headset_disconnected(struct corsair_void_drvdata *drvda
  * Driver setup, probing and HID event handling
 */
 
-static DEVICE_ATTR(fw_version_receiver, 0444, corsair_void_report_firmware, NULL);
-static DEVICE_ATTR(fw_version_headset, 0444, corsair_void_report_firmware, NULL);
+static DEVICE_ATTR_RO(fw_version_receiver);
+static DEVICE_ATTR_RO(fw_version_headset);
 static DEVICE_ATTR_RO(microphone_up);
 static DEVICE_ATTR_RO(sidetone_max);
 
