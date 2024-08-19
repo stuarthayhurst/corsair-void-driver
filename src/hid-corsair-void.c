@@ -370,17 +370,11 @@ static ssize_t send_alert_store(struct device *dev,
 	unsigned char *send_buf __free(kfree) = NULL;
 	int ret;
 
-	if (!drvdata->connected)
+	if (!drvdata->connected || drvdata->is_wired)
 		return -ENODEV;
-
-	if (drvdata->is_wired)
-		return -ENODEV;
-
-	if (kstrtou8(buf, 10, &alert_id))
-		return -EINVAL;
 
 	/* Only accept 0 or 1 for alert ID */
-	if (alert_id >= 2)
+	if (kstrtou8(buf, 10, &alert_id) || alert_id >= 2)
 		return -EINVAL;
 
 	send_buf = kmalloc(3, GFP_KERNEL);
@@ -468,11 +462,8 @@ static ssize_t set_sidetone_store(struct device *dev,
 	if (!drvdata->connected)
 		return -ENODEV;
 
-	if (kstrtouint(buf, 10, &sidetone))
-		return -EINVAL;
-
 	/* sidetone must be between 0 and drvdata->sidetone_max inclusive */
-	if (sidetone > drvdata->sidetone_max)
+	if (kstrtouint(buf, 10, &sidetone) || sidetone > drvdata->sidetone_max)
 		return -EINVAL;
 
 	if (drvdata->is_wired)
