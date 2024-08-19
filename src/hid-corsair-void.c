@@ -703,13 +703,12 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 	if (ret)
 		return ret;
 
+	/* Any failures after here will need to call hid_hw_stop */
 	ret = hid_hw_start(hid_dev, HID_CONNECT_DEFAULT);
 	if (ret) {
 		hid_err(hid_dev, "hid_hw_start failed (reason: %d)\n", ret);
 		goto failed_after_sysfs;
 	}
-
-	/* Any failures after here should go to failed_after_hid_start */
 
 	/* Refresh battery data, in case wireless headset is already connected */
 	INIT_DELAYED_WORK(&drvdata->delayed_status_work,
@@ -725,8 +724,6 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 
 	return 0;
 
-/*failed_after_hid_start:
-	hid_hw_stop(hid_dev);*/
 failed_after_sysfs:
 	sysfs_remove_group(&hid_dev->dev.kobj, &corsair_void_attr_group);
 	return ret;
