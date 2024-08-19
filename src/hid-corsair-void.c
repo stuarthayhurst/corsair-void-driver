@@ -565,6 +565,7 @@ static void corsair_void_battery_add_work_handler(struct work_struct *work)
 {
 	struct corsair_void_drvdata *drvdata;
 	struct power_supply_config psy_cfg;
+	struct power_supply *new_supply;
 
 	drvdata = container_of(work, struct corsair_void_drvdata,
 			       battery_add_work);
@@ -573,24 +574,24 @@ static void corsair_void_battery_add_work_handler(struct work_struct *work)
 		return;
 
 	psy_cfg.drv_data = drvdata;
-	drvdata->battery = power_supply_register(drvdata->dev,
-						 &drvdata->battery_desc,
-						 &psy_cfg);
+	new_supply = power_supply_register(drvdata->dev,
+					   &drvdata->battery_desc,
+					   &psy_cfg);
 
-	if (IS_ERR(drvdata->battery)) {
+	if (IS_ERR(new_supply)) {
 		hid_err(drvdata->hid_dev,
 			"failed to register battery '%s' (reason: %ld)\n",
 			drvdata->battery_desc.name,
-			PTR_ERR(drvdata->battery));
-		drvdata->battery = NULL;
+			PTR_ERR(new_supply));
 		return;
 	}
 
-	if (power_supply_powers(drvdata->battery, drvdata->dev)) {
-		power_supply_unregister(drvdata->battery);
-		drvdata->battery = NULL;
+	if (power_supply_powers(new_supply, drvdata->dev)) {
+		power_supply_unregister(new_supply);
 		return;
 	}
+
+	drvdata->battery = new_supply;
 }
 
 static void corsair_void_headset_connected(struct corsair_void_drvdata *drvdata)
