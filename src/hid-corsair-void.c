@@ -367,7 +367,7 @@ static ssize_t send_alert_store(struct device *dev,
 	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
 	struct hid_device *hid_dev = drvdata->hid_dev;
 	unsigned char alert_id;
-	unsigned char *send_buf;
+	unsigned char *send_buf __free(kfree) = NULL;
 	int ret;
 
 	if (!drvdata->connected)
@@ -402,7 +402,6 @@ static ssize_t send_alert_store(struct device *dev,
 		ret = count;
 	}
 
-	kfree(send_buf);
 	return ret;
 }
 
@@ -429,7 +428,7 @@ static int corsair_void_set_sidetone_wireless(struct device *dev, const char *bu
 {
 	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
 	struct hid_device *hid_dev = drvdata->hid_dev;
-	unsigned char *send_buf;
+	unsigned char *send_buf __free(kfree) = NULL;
 	int ret = 0;
 
 	send_buf = kmalloc(12, GFP_KERNEL);
@@ -454,7 +453,6 @@ static int corsair_void_set_sidetone_wireless(struct device *dev, const char *bu
 				 send_buf, 12, HID_FEATURE_REPORT,
 				 HID_REQ_SET_REPORT);
 
-	kfree(send_buf);
 	return ret;
 }
 
@@ -492,7 +490,7 @@ static ssize_t set_sidetone_store(struct device *dev,
 
 static int corsair_void_request_status(struct hid_device *hid_dev, int id)
 {
-	unsigned char *send_buf;
+	unsigned char *send_buf __free(kfree) = NULL;
 	int ret;
 
 	send_buf = kmalloc(2, GFP_KERNEL);
@@ -525,7 +523,6 @@ static int corsair_void_request_status(struct hid_device *hid_dev, int id)
 		ret = 0;
 	}
 
-	kfree(send_buf);
 	return ret;
 }
 
