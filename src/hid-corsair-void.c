@@ -723,13 +723,12 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 	schedule_delayed_work(&drvdata->delayed_firmware_work,
 			      msecs_to_jiffies(100));
 
-	goto success;
+	return 0;
 
 /*failed_after_hid_start:
 	hid_hw_stop(hid_dev);*/
 failed_after_sysfs:
 	sysfs_remove_group(&hid_dev->dev.kobj, &corsair_void_attr_group);
-success:
 	return ret;
 }
 
