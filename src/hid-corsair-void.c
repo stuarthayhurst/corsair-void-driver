@@ -638,7 +638,7 @@ static const struct attribute_group corsair_void_attr_group = {
 static int corsair_void_probe(struct hid_device *hid_dev,
 			      const struct hid_device_id *hid_id)
 {
-	int ret = 0;
+	int ret;
 	struct corsair_void_drvdata *drvdata;
 	char *name;
 	int name_length;
