@@ -389,12 +389,11 @@ static ssize_t send_alert_store(struct device *dev,
 	ret = hid_hw_raw_request(hid_dev, CORSAIR_VOID_NOTIF_REQUEST_ID,
 				 send_buf, 3, HID_OUTPUT_REPORT,
 				 HID_REQ_SET_REPORT);
-	if (ret < 0) {
+	if (ret < 0)
 		hid_warn(hid_dev, "failed to send alert request (reason: %d)",
 			 ret);
-	} else {
+	else
 		ret = count;
-	}
 
 	return ret;
 }
@@ -417,7 +416,8 @@ static int corsair_void_set_sidetone_wired(struct device *dev, const char *buf,
 				   GFP_KERNEL);
 }
 
-static int corsair_void_set_sidetone_wireless(struct device *dev, const char *buf,
+static int corsair_void_set_sidetone_wireless(struct device *dev,
+					      const char *buf,
 					      unsigned char sidetone)
 {
 	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
