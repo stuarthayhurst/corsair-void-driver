@@ -231,9 +231,9 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata,
 	case CORSAIR_VOID_BATTERY_LOW:
 	case CORSAIR_VOID_BATTERY_CRITICAL:
 		battery_data->status = POWER_SUPPLY_STATUS_DISCHARGING;
-		if (raw_battery_status == 2)
+		if (raw_battery_status == CORSAIR_VOID_BATTERY_LOW)
 			battery_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_LOW;
-		else if (raw_battery_status == 3)
+		else if (raw_battery_status == CORSAIR_VOID_BATTERY_CRITICAL)
 			battery_data->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_CRITICAL;
 
 		break;
