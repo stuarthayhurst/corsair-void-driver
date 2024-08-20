@@ -208,7 +208,6 @@ static void corsair_void_process_receiver(struct corsair_void_drvdata *drvdata,
 {
 	struct corsair_void_battery_data *battery_data = &drvdata->battery_data;
 	struct corsair_void_battery_data orig_battery_data;
-	int battery_struct_size = sizeof(struct corsair_void_battery_data);
 
 	/* Save initial battery data, to compare later */
 	orig_battery_data = *battery_data;
@@ -259,7 +258,7 @@ unknown_battery:
 success:
 
 	/* Inform power supply if battery values changed */
-	if (memcmp(&orig_battery_data, battery_data, battery_struct_size)) {
+	if (memcmp(&orig_battery_data, battery_data, sizeof(*battery_data))) {
 		scoped_guard(mutex, &drvdata->battery_mutex) {
 			if (drvdata->battery) {
 				power_supply_changed(drvdata->battery);
