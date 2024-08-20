@@ -423,7 +423,6 @@ static int corsair_void_set_sidetone_wireless(struct device *dev, const char *bu
 	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
 	struct hid_device *hid_dev = drvdata->hid_dev;
 	unsigned char *send_buf __free(kfree) = NULL;
-	int ret = 0;
 
 	send_buf = kmalloc(12, GFP_KERNEL);
 	if (!send_buf)
@@ -443,11 +442,9 @@ static int corsair_void_set_sidetone_wireless(struct device *dev, const char *bu
 	send_buf[10] = 0x00;
 	send_buf[11] = sidetone + 200;
 
-	ret = hid_hw_raw_request(hid_dev, CORSAIR_VOID_SIDETONE_REQUEST_ID,
-				 send_buf, 12, HID_FEATURE_REPORT,
-				 HID_REQ_SET_REPORT);
-
-	return ret;
+	return hid_hw_raw_request(hid_dev, CORSAIR_VOID_SIDETONE_REQUEST_ID,
+				  send_buf, 12, HID_FEATURE_REPORT,
+				  HID_REQ_SET_REPORT);
 }
 
 static ssize_t set_sidetone_store(struct device *dev,
