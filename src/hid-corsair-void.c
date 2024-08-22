@@ -72,6 +72,7 @@
 #include <linux/bitfield.h>
 #include <linux/bitops.h>
 #include <linux/cleanup.h>
+#include <linux/device.h>
 #include <linux/hid.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
