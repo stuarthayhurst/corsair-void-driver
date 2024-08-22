@@ -480,7 +480,6 @@ static ssize_t set_sidetone_store(struct device *dev,
 static int corsair_void_request_status(struct hid_device *hid_dev, int id)
 {
 	unsigned char *send_buf __free(kfree) = NULL;
-	int ret;
 
 	send_buf = kmalloc(2, GFP_KERNEL);
 	if (!send_buf)
@@ -491,29 +490,9 @@ static int corsair_void_request_status(struct hid_device *hid_dev, int id)
 	send_buf[1] = id;
 
 	/* Send request for data refresh */
-	ret = hid_hw_raw_request(hid_dev, CORSAIR_VOID_STATUS_REQUEST_ID,
-				 send_buf, 2, HID_OUTPUT_REPORT,
-				 HID_REQ_SET_REPORT);
-	if (ret < 0) {
-		switch (id) {
-		case CORSAIR_VOID_STATUS_REPORT_ID:
-			hid_warn(hid_dev, "failed to request battery (reason: %d)",
-				 ret);
-			break;
-		case CORSAIR_VOID_FIRMWARE_REPORT_ID:
-			hid_warn(hid_dev, "failed to request firmware (reason: %d)",
-				 ret);
-			break;
-		default:
-			hid_warn(hid_dev, "failed to send report %d (reason: %d)",
-				 id, ret);
-			break;
-		}
-	} else {
-		ret = 0;
-	}
-
-	return ret;
+	return hid_hw_raw_request(hid_dev, CORSAIR_VOID_STATUS_REQUEST_ID,
+				  send_buf, 2, HID_OUTPUT_REPORT,
+				  HID_REQ_SET_REPORT);
 }
 
 /*
@@ -524,26 +503,37 @@ static void corsair_void_status_work_handler(struct work_struct *work)
 {
 	struct corsair_void_drvdata *drvdata;
 	struct delayed_work *delayed_work;
+	int battery_ret;
 
 	delayed_work = container_of(work, struct delayed_work, work);
 	drvdata = container_of(delayed_work, struct corsair_void_drvdata,
 			       delayed_status_work);
 
-	corsair_void_request_status(drvdata->hid_dev,
-				    CORSAIR_VOID_STATUS_REPORT_ID);
+	battery_ret = corsair_void_request_status(drvdata->hid_dev,
+						  CORSAIR_VOID_STATUS_REPORT_ID);
+	if (battery_ret < 0) {
+		hid_warn(drvdata->hid_dev,
+			 "failed to request battery (reason: %d)", battery_ret);
+	}
 }
 
 static void corsair_void_firmware_work_handler(struct work_struct *work)
 {
 	struct corsair_void_drvdata *drvdata;
 	struct delayed_work *delayed_work;
+	int firmware_ret;
 
 	delayed_work = container_of(work, struct delayed_work, work);
 	drvdata = container_of(delayed_work, struct corsair_void_drvdata,
 			       delayed_firmware_work);
 
-	corsair_void_request_status(drvdata->hid_dev,
-				    CORSAIR_VOID_FIRMWARE_REPORT_ID);
+	firmware_ret = corsair_void_request_status(drvdata->hid_dev,
+						   CORSAIR_VOID_FIRMWARE_REPORT_ID);
+	if (firmware_ret < 0) {
+		hid_warn(drvdata->hid_dev,
+			 "failed to request firmware (reason: %d)", firmware_ret);
+	}
+
 }
 
 static void corsair_void_battery_remove_work_handler(struct work_struct *work)
