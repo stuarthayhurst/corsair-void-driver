@@ -352,6 +352,7 @@ static ssize_t sidetone_max_show(struct device *dev,
 				 char *buf)
 {
 	struct corsair_void_drvdata *drvdata = dev_get_drvdata(dev);
+
 	return sysfs_emit(buf, "%d\n", drvdata->sidetone_max);
 }
 
