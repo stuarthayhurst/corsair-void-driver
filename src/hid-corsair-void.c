@@ -639,7 +639,6 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 	int ret;
 	struct corsair_void_drvdata *drvdata;
 	char *name;
-	int name_length;
 
 	if (!hid_is_usb(hid_dev))
 		return -EINVAL;
@@ -676,11 +675,10 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 		return ret;
 	}
 
-	name_length = snprintf(NULL, 0, "corsair-void-%d-battery", hid_dev->id);
-	name = devm_kzalloc(drvdata->dev, name_length + 1, GFP_KERNEL);
+	name = devm_kasprintf(drvdata->dev, GFP_KERNEL,
+			      "corsair-void-%d-battery", hid_dev->id);
 	if (!name)
 		return -ENOMEM;
-	snprintf(name, name_length + 1, "corsair-void-%d-battery", hid_dev->id);
 
 	drvdata->battery_desc.name = name;
 	drvdata->battery_desc.type = POWER_SUPPLY_TYPE_BATTERY;
