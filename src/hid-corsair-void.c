@@ -491,7 +491,8 @@ static int corsair_void_request_status(struct hid_device *hid_dev, int id)
 
 	/* Send request for data refresh */
 	ret = hid_hw_raw_request(hid_dev, CORSAIR_VOID_STATUS_REQUEST_ID,
-			  send_buf, 2, HID_OUTPUT_REPORT, HID_REQ_SET_REPORT);
+				 send_buf, 2, HID_OUTPUT_REPORT,
+				 HID_REQ_SET_REPORT);
 	if (ret < 0) {
 		switch (id) {
 		case CORSAIR_VOID_STATUS_REPORT_ID:
