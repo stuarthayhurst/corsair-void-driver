@@ -18,7 +18,14 @@
 ## Features
   - [x] Battery reporting
   - [ ] LED support (on / off, brightness, colour)
-    - I currently have no plans to tackle this, but pull requests are welcome
+    - I currently have no set plans to tackle this, but pull requests are welcome
+    - For anyone attempting this, here's a rough check-list:
+      - [ ] Software control mode on probe
+      - [ ] Handlers for both mutes
+      - [ ] Audio alerts when mute state changes
+        - [ ] Audio alerts for wired devices
+      - [ ] LED control functions
+      - [ ] Sysfs LED support
   - [x] Sidetone support
     - [x] `(sysfs) set_sidetone: [0 - sidetone_max] (write-only)`
     - [x] `(sysfs) sidetone_max (read-only)`
