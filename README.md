@@ -24,6 +24,7 @@
       - [ ] Handlers for both mutes
       - [ ] Audio alerts when mute state changes
         - [ ] Audio alerts for wired devices
+        - [ ] Share the code for this with sysfs
       - [ ] LED control functions
       - [ ] Sysfs LED support
   - [x] Sidetone support
