@@ -71,11 +71,9 @@
 
 #include <linux/bitfield.h>
 #include <linux/bitops.h>
-#include <linux/cleanup.h>
 #include <linux/device.h>
 #include <linux/hid.h>
 #include <linux/module.h>
-#include <linux/mutex.h>
 #include <linux/power_supply.h>
 #include <linux/usb.h>
 #include <linux/workqueue.h>
@@ -159,7 +157,6 @@ struct corsair_void_drvdata {
 
 	struct power_supply *battery;
 	struct power_supply_desc battery_desc;
-	struct mutex battery_mutex;
 
 	struct delayed_work delayed_status_work;
 	struct delayed_work delayed_firmware_work;
@@ -544,7 +541,6 @@ static void corsair_void_add_battery(struct corsair_void_drvdata *drvdata)
 	struct power_supply_config psy_cfg = {};
 	struct power_supply *new_supply;
 
-	guard(mutex)(&drvdata->battery_mutex);
 	if (drvdata->battery)
 		return;
 
@@ -585,20 +581,16 @@ static void corsair_void_battery_work_handler(struct work_struct *work)
 	if (add_battery && !remove_battery) {
 		corsair_void_add_battery(drvdata);
 	} else if (remove_battery && !add_battery) {
-		scoped_guard(mutex, &drvdata->battery_mutex) {
-			if (drvdata->battery) {
-				power_supply_unregister(drvdata->battery);
-				drvdata->battery = NULL;
-			}
+		if (drvdata->battery) {
+			power_supply_unregister(drvdata->battery);
+			drvdata->battery = NULL;
 		}
 	}
 
 	/* Communicate that battery values changed */
 	if (update_battery) {
-		scoped_guard(mutex, &drvdata->battery_mutex) {
-			if (drvdata->battery)
-				power_supply_changed(drvdata->battery);
-		}
+		if (drvdata->battery)
+			power_supply_changed(drvdata->battery);
 	}
 
 }
@@ -701,9 +693,6 @@ static int corsair_void_probe(struct hid_device *hid_dev,
 
 	drvdata->battery = NULL;
 	INIT_WORK(&drvdata->battery_work, corsair_void_battery_work_handler);
-	ret = devm_mutex_init(drvdata->dev, &drvdata->battery_mutex);
-	if (ret)
-		return ret;
 
 	ret = sysfs_create_group(&hid_dev->dev.kobj, &corsair_void_attr_group);
 	if (ret)
