@@ -3,6 +3,7 @@
     - Includes the Corsair Void Pro / Elite / RGB headsets
   - Upstreamed for kernel 6.13+
   - Requires kernel headers to be installed
+  - Kernels before 6.17 are only supported up to tag `v0.3`
   - Kernels before 6.10 are only supported up to tag `v0.2`
   - Kernels before 6.4 are only supported up to tag `v0.1`
 
